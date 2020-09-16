@@ -101,11 +101,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
 
         //view camera
-        //temp = XMMatrixLookAtLH({ 0, 10, -25 }, { 0,-10,0 }, { 0,1,0 }); //This is the easy way of setting up a camera. In the future this will need to be changed because this version isn't optimizable
         camera = cameraMovement(camera, timer.Delta());
         XMStoreFloat4x4(&myMatricies.vMatrix, XMMatrixInverse(nullptr, camera)); //Storing matrix
-
-        //temp = XMMatrixInverse(nullptr, temp); // Setting it in world space
 
         //projection
         temp = XMMatrixPerspectiveFovLH(3.14f / 2.0f, aspectR, 0.1f, 1000);
@@ -162,21 +159,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
       //Set pipeline for spaceship
         mesh_strides[0] = { sizeof(SimpleVertex) };
         mesh_offsets[0] = { 0 };
-        meshVB[0] = { vBuffMesh };
-        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
-        myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
+        meshVB[0] = { vshipBuffer };
+        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets); //CHANGE
+        myCon->IASetIndexBuffer(ishipBuffer, DXGI_FORMAT_R32_UINT, 0); //CHANGE
         myCon->VSSetShader(ShipvShader, 0, 0);
         myCon->PSSetShader(ShippShader, 0, 0);
         myCon->IASetInputLayout(ShipvLayout);
 
         temp = XMMatrixIdentity(); //Using XMMATRIX temp for high perfomance
         temp = XMMatrixTranslation(0, 2, 0);
-        //temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp);
         XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
 
         //Setting the world matrix to not spin after anything that is drawn here
         temp = XMMatrixIdentity();
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
+        temp = XMMatrixTranslation(0, 3, 0); // Move it
+        temp = XMMatrixMultiply(XMMatrixScaling(6, 6, 6), temp); //Make it larger
+        temp = XMMatrixMultiply(temp2rotate, temp); //flip these if you want the object to spin around world space
+        XMStoreFloat4x4(&myMatricies.wMatrix, temp); 
         //Telling the video card to refresh
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
@@ -373,6 +372,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    subData.pSysMem = StoneHenge_indicies;
    hr = myDev->CreateBuffer(&bDesc, &subData, &iBuffMesh);
 
+   ZeroMemory(&bDesc, sizeof(bDesc));
+
+
    //Load mesh shader
    hr = myDev->CreateVertexShader(MyMeshVShader, sizeof(MyMeshVShader), nullptr, &vMeshShader);
    
@@ -391,7 +393,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    //Make matching input layout for ship
    LoadMesh("./Assets/WorkingShipMesh", shipMesh);
-   hr = CreateDDSTextureFromFile(myDev, L"./Assets/Spaceship.dds", nullptr, &ShipTexture);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/vette_color.dds", nullptr, &ShipTexture);  //Loading texture
 
    D3D11_INPUT_ELEMENT_DESC meshShipInputDesc[] =
    {
@@ -402,8 +404,27 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    };
    hr = myDev->CreateInputLayout(meshShipInputDesc, 3, SpaceShipVS, sizeof(SpaceShipVS), &ShipvLayout);
 
+
+
+   //TODO: make vertex and index buffer for spaceship using shipMesh
+      //Load complex meshes
+   bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+   bDesc.ByteWidth = sizeof(SimpleVertex) * shipMesh.vertexList.size();
+   bDesc.CPUAccessFlags = 0;
+   bDesc.MiscFlags = 0;
+   bDesc.StructureByteStride = 0;
+   bDesc.Usage = D3D11_USAGE_IMMUTABLE; //IMMUTABLE = Not modifiable
+   subData.pSysMem = shipMesh.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vshipBuffer); //Mesh vertex buffer
+
+   //Index buffer complex mesh
+   bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   bDesc.ByteWidth = sizeof(unsigned int) * (shipMesh.indicesList.size());
+   subData.pSysMem = shipMesh.indicesList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &ishipBuffer);
+
    //Setting up camera
-   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -25 }, { 0,0,0 }, { 0,1,0 }));
+   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 }));
 
    //Zbuffer
    D3D11_TEXTURE2D_DESC zDesc;

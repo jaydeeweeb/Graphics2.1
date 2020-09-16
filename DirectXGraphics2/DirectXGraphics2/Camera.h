@@ -35,5 +35,23 @@ XMMATRIX cameraMovement(XMMATRIX posititon, float delta)
 	}
 
 
+	if (GetAsyncKeyState(VK_UP))
+	{
+		temp = XMMatrixMultiply(XMMatrixTranslation(0, speed * delta, 0), temp);
+	}
+	if (GetAsyncKeyState(VK_DOWN))
+	{
+		temp = XMMatrixMultiply(XMMatrixTranslation(0, -speed * delta, 0), temp);
+	}
+
+	//TEMPORARY
+	if (GetAsyncKeyState(VK_RIGHT))
+	{
+		temp = XMMatrixMultiply(XMMatrixRotationY(speed * delta), temp);
+	}
+	if (GetAsyncKeyState(VK_LEFT))
+	{
+		temp = XMMatrixMultiply(XMMatrixRotationY(-speed * delta), temp);
+	}
 	return temp;
 }

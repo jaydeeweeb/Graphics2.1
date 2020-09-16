@@ -5,6 +5,8 @@
 //    XMFLOAT2 Tex;
 //};
 
+#pragma pack_matrix(row_major) // treats all matricies to row major
+
 struct InputVertex //Where 2 lines meet
 {
     float3 pos : POSITION;

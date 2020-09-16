@@ -50,6 +50,8 @@ ID3D11Buffer* cBuff;
 //mesh data
 ID3D11Buffer* vBuffMesh; //vertex buff
 ID3D11Buffer* iBuffMesh; //index buffer
+ID3D11Buffer* vshipBuffer; //vertex buff
+ID3D11Buffer* ishipBuffer; //index buffer
 
 //Mesh vertex data
 ID3D11VertexShader* vMeshShader;
