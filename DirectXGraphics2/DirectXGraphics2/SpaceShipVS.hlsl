@@ -7,7 +7,7 @@
 
 #pragma pack_matrix(row_major) // treats all matricies to row major
 
-struct InputVertex //Where 2 lines meet
+struct InputVertex //Matches inputlayout
 {
     float3 pos : POSITION;
     float3 nrm : NORMAL;

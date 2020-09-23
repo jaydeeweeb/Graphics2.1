@@ -76,21 +76,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         //Input assembler
         myCon->IASetInputLayout(vLayout);
 
-        UINT strides[] = { sizeof(MyVertex) };
-        UINT offsets[] = { 0 };
-        ID3D11Buffer* tempVB[] = { vBuff };
-
-        myCon->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
         myCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        //Vertex shader stage
-        myCon->VSSetShader(vShader, 0, 0);
-        //Pixel shader stage
-        myCon->PSSetShader(pShader, 0, 0);
-        //Pixel shader resources (3rd parameter expects an array: bypass with &)
-        myCon->PSSetShaderResources(0, 1, &StonehengeTexture);
-
-
 
         //Make triangle 3D
         static float rotate = 0; rotate += 0.001;
@@ -119,14 +105,46 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         ID3D11Buffer* constants[] = { cBuff };
         myCon->VSSetConstantBuffers(0, 1, constants);
 
-        //Draw
-        //myCon->Draw(numVerts, 0);
-
         //Immediate context
         //Get a more complex mesh (FBX, obj, header)
         //Load it onto the card (vertex buffer, index buffer)
         //Make sure our shaders can proccess it
         //Place it somewhere else
+
+        //SkyBox setup
+        UINT mesh_strides1[] = { sizeof(SimpleVertex) };
+        UINT mesh_offsets1[] = { 0 };
+        myCon->IASetVertexBuffers(0, 1, &vskyBoxBuffer, mesh_strides1, mesh_offsets1);
+        myCon->IASetIndexBuffer(iskyBoxBuffer, DXGI_FORMAT_R32_UINT, 0);
+        myCon->VSSetShader(SpaceBoxV, 0, 0);
+        myCon->PSSetShader(SpaceBoxP, 0, 0);
+        myCon->IASetInputLayout(ShipvLayout);
+
+        temp = XMMatrixIdentity(); //Using XMMATRIX temp for high perfomance
+        temp = XMMatrixTranslation(camera.r[3].m128_f32[0], camera.r[3].m128_f32[1], camera.r[3].m128_f32[2]);
+        XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
+
+        hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+        *((WVP*)(gpuBuffer.pData)) = myMatricies;
+        myCon->Unmap(cBuff, 0);
+        //Pixel shader resources (3rd parameter expects an array: bypass with &)
+        myCon->PSSetShaderResources(0, 1, &SpaceBoxTex);
+        //Draw it
+        myCon->DrawIndexed(skyBox.indicesList.size(), 0, 0);
+        myCon->ClearDepthStencilView(zBufferView, D3D11_CLEAR_DEPTH, 1, 0);
+
+        UINT strides[] = { sizeof(MyVertex) };
+        UINT offsets[] = { 0 };
+        ID3D11Buffer* tempVB[] = { vBuff };
+
+        myCon->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
+
+        //Vertex shader stage
+        myCon->VSSetShader(vShader, 0, 0);
+        //Pixel shader stage
+        myCon->PSSetShader(pShader, 0, 0);
+        //Pixel shader resources (3rd parameter expects an array: bypass with &)
+        myCon->PSSetShaderResources(0, 1, &StonehengeTexture);
 
         //Set pipeline for stonehenge
         UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
@@ -183,7 +201,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         //Pixel shader resources (3rd parameter expects an array: bypass with &)
         myCon->PSSetShaderResources(0, 1, &ShipTexture);
         //Draw it
-        myCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
+        wmyCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
+
+
+
+
 
 
       mySwap->Present(0, 0); // Telling the backbuffer (the cleared 2d texture) to swap with the front buffer
@@ -404,7 +426,29 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    };
    hr = myDev->CreateInputLayout(meshShipInputDesc, 3, SpaceShipVS, sizeof(SpaceShipVS), &ShipvLayout);
 
+   //For skybox
+   hr = myDev->CreateVertexShader(SpaceBoxVS, sizeof(SpaceBoxVS), nullptr, &SpaceBoxV);
+   hr = myDev->CreatePixelShader(SpaceBoxPS, sizeof(SpaceBoxPS), nullptr, &SpaceBoxP);
 
+   LoadMesh("./Assets/SpaceSkyBox", skyBox);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/Space.dds", nullptr, &SpaceBoxTex);  //Loading texture
+
+   //TODO: make vertex and index buffer for spaceship using shipMesh
+      //Load complex meshes
+   bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+   bDesc.ByteWidth = sizeof(SimpleVertex) * skyBox.vertexList.size();
+   bDesc.CPUAccessFlags = 0;
+   bDesc.MiscFlags = 0;
+   bDesc.StructureByteStride = 0;
+   bDesc.Usage = D3D11_USAGE_IMMUTABLE; //IMMUTABLE = Not modifiable
+   subData.pSysMem = skyBox.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vskyBoxBuffer); //Mesh vertex buffer
+
+   //Index buffer complex mesh
+   bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   bDesc.ByteWidth = sizeof(unsigned int) * (skyBox.indicesList.size());
+   subData.pSysMem = skyBox.indicesList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &iskyBoxBuffer);
 
    //TODO: make vertex and index buffer for spaceship using shipMesh
       //Load complex meshes

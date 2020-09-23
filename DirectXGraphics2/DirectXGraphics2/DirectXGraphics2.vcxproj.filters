@@ -73,5 +73,7 @@
     <FxCompile Include="MyMeshVShader.hlsl" />
     <FxCompile Include="SpaceShipPS.hlsl" />
     <FxCompile Include="SpaceShipVS.hlsl" />
+    <FxCompile Include="SpaceBoxPS.hlsl" />
+    <FxCompile Include="SpaceBoxVS.hlsl" />
   </ItemGroup>
 </Project>

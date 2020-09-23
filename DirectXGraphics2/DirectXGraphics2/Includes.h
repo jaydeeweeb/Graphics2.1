@@ -20,6 +20,8 @@ using namespace std;
 #include "SpaceShipPS.csh"
 #include "Camera.h"
 #include "DDSTextureLoader.h"
+#include "SpaceBoxVS.csh"
+#include "SpaceBoxPS.csh"
 
 //Mesh
 #include"Assets/StoneHenge.h"
@@ -43,6 +45,9 @@ ID3D11ShaderResourceView* ShipTexture;
 ID3D11InputLayout* ShipvLayout;
 ID3D11VertexShader* ShipvShader; //HLSL
 ID3D11PixelShader* ShippShader;
+ID3D11VertexShader* SpaceBoxV;
+ID3D11PixelShader* SpaceBoxP;
+ID3D11ShaderResourceView* SpaceBoxTex;
 
 //Shader variables
 ID3D11Buffer* cBuff;
@@ -52,6 +57,8 @@ ID3D11Buffer* vBuffMesh; //vertex buff
 ID3D11Buffer* iBuffMesh; //index buffer
 ID3D11Buffer* vshipBuffer; //vertex buff
 ID3D11Buffer* ishipBuffer; //index buffer
+ID3D11Buffer* vskyBoxBuffer; //vertex buff
+ID3D11Buffer* iskyBoxBuffer; //index buffer
 
 //Mesh vertex data
 ID3D11VertexShader* vMeshShader;
@@ -93,6 +100,8 @@ struct SimpleMesh
 };
 
 SimpleMesh shipMesh;
+SimpleMesh skyBox;
+
 
 void releaseData()
 {
