@@ -201,7 +201,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         //Pixel shader resources (3rd parameter expects an array: bypass with &)
         myCon->PSSetShaderResources(0, 1, &ShipTexture);
         //Draw it
-        wmyCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
+        myCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
 
 
 
