@@ -1,5 +1,6 @@
 // DirectXGraphics2.cpp : Defines the entry point for the application.
 //
+////
 
 #include "Includes.h"
 void LoadMesh(const char* meshFileName, SimpleMesh& mesh);
