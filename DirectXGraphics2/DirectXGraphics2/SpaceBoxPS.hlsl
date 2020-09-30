@@ -2,7 +2,7 @@ textureCUBE txDiffuse : register(t0);
 SamplerState samLinear : register(s0);
 
 
-struct OutputVertex //float4
+struct OutputVertex
 {
     float4 xyzw : SV_Position;
     float3 nrm : ONORMAL;

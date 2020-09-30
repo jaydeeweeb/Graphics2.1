@@ -3,8 +3,14 @@
 
 #include "Includes.h"
 void LoadMesh(const char* meshFileName, SimpleMesh& mesh);
+D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DATA data, SimpleMesh meshVertexData, D3D11_BIND_FLAG flag, D3D11_USAGE usage, int cpuFlags, int miscFlags, int byteStride);
+XMMATRIX rotateObject(XMMATRIX temp, float speed, float rotation);
 
 #define MAX_LOADSTRING 100
+
+
+static float rotate1 = 0;
+static float rotate2 = 0;
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -59,32 +65,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         if (msg.message == WM_QUIT)
             break;
 
-        //Render here
-        float color[] = { 0, 1.0f, 1.0f, 1.0f };  //ARGB
-        myCon->ClearRenderTargetView(myRtv, color);
-
         myCon->ClearDepthStencilView(zBufferView, D3D11_CLEAR_DEPTH, 1, 0);
-        //Set up pipeline
-        //myCon->OMSetRenderTargets();
-
 
         //Output merger
         ID3D11RenderTargetView* tempRTV[] = { myRtv }; //Making our Render target view an array of pointers because the funtion below
         myCon->OMSetRenderTargets(1, tempRTV, zBufferView);
         //Rasterizer
         myCon->RSSetViewports(1, &myPort);
-        //Input assembler
-        myCon->IASetInputLayout(vLayout);
 
         myCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        //Make triangle 3D
-        static float rotate = 0; rotate += 0.001;
-        XMMATRIX temp = XMMatrixIdentity(); //Using XMMATRIX temp for high perfomance
-        temp = XMMatrixTranslation(0, 5, 2);
-        XMMATRIX temp2rotate = XMMatrixRotationY(rotate);
-        temp = XMMatrixMultiply(temp2rotate, temp); //flip these if you want the object to spin around world space
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
 
         //view camera
         camera = cameraMovement(camera, timer.Delta());
@@ -97,7 +86,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         D3D11_MAPPED_SUBRESOURCE gpuBuffer;
         HRESULT hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
-        //memcpy(gpuBuffer.pData, &myMatricies, sizeof(WVP));
         myCon->Unmap(cBuff, 0);
 
         //Connect const buffer to pipeline
@@ -105,20 +93,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         ID3D11Buffer* constants[] = { cBuff };
         myCon->VSSetConstantBuffers(0, 1, constants);
 
-        //Immediate context
-        //Get a more complex mesh (FBX, obj, header)
-        //Load it onto the card (vertex buffer, index buffer)
-        //Make sure our shaders can proccess it
-        //Place it somewhere else
 
         //SkyBox setup
         UINT mesh_strides1[] = { sizeof(SimpleVertex) };
         UINT mesh_offsets1[] = { 0 };
         myCon->IASetVertexBuffers(0, 1, &vskyBoxBuffer, mesh_strides1, mesh_offsets1);
         myCon->IASetIndexBuffer(iskyBoxBuffer, DXGI_FORMAT_R32_UINT, 0);
-        myCon->VSSetShader(SpaceBoxV, 0, 0);
-        myCon->PSSetShader(SpaceBoxP, 0, 0);
-        myCon->IASetInputLayout(ShipvLayout);
+        myCon->VSSetShader(spaceBoxV, 0, 0);
+        myCon->PSSetShader(spaceBoxPShader, 0, 0);
+        myCon->IASetInputLayout(shipVLayout);
 
         temp = XMMatrixIdentity(); //Using XMMATRIX temp for high perfomance
         temp = XMMatrixTranslation(camera.r[3].m128_f32[0], camera.r[3].m128_f32[1], camera.r[3].m128_f32[2]);
@@ -128,23 +111,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
         myCon->Unmap(cBuff, 0);
         //Pixel shader resources (3rd parameter expects an array: bypass with &)
-        myCon->PSSetShaderResources(0, 1, &SpaceBoxTex);
+        myCon->PSSetShaderResources(0, 1, &spaceBoxTex);
         //Draw it
         myCon->DrawIndexed(skyBox.indicesList.size(), 0, 0);
         myCon->ClearDepthStencilView(zBufferView, D3D11_CLEAR_DEPTH, 1, 0);
 
-        UINT strides[] = { sizeof(MyVertex) };
-        UINT offsets[] = { 0 };
-        ID3D11Buffer* tempVB[] = { vBuff };
-
-        myCon->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
-
-        //Vertex shader stage
-        myCon->VSSetShader(vShader, 0, 0);
-        //Pixel shader stage
-        myCon->PSSetShader(pShader, 0, 0);
-        //Pixel shader resources (3rd parameter expects an array: bypass with &)
-        myCon->PSSetShaderResources(0, 1, &StonehengeTexture);
 
         //Set pipeline for stonehenge
         UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
@@ -153,60 +124,86 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
         myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
         myCon->VSSetShader(vMeshShader,0,0);
+        myCon->PSSetShader(pShader, 0, 0);
         myCon->IASetInputLayout(vMeshLayout);
 
         //Setting the world matrix to not spin after anything that is drawn here
         temp = XMMatrixIdentity();
         XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
+
         //Telling the video card to refresh
          hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
+
+        myCon->PSSetShaderResources(0, 1, &stonehengeTexture);
+
         myCon->Unmap(cBuff, 0);
         //Draw it
         myCon->DrawIndexed(2532, 0, 0);
 
 
-
-
-        //Immediate context
-      //Get a more complex mesh (FBX, obj, header)
-      //Load it onto the card (vertex buffer, index buffer)
-      //Make sure our shaders can proccess it
-      //Place it somewhere else
-
-      //Set pipeline for spaceship
+        //Set pipeline for spaceship
         mesh_strides[0] = { sizeof(SimpleVertex) };
         mesh_offsets[0] = { 0 };
         meshVB[0] = { vshipBuffer };
-        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets); //CHANGE
-        myCon->IASetIndexBuffer(ishipBuffer, DXGI_FORMAT_R32_UINT, 0); //CHANGE
-        myCon->VSSetShader(ShipvShader, 0, 0);
-        myCon->PSSetShader(ShippShader, 0, 0);
-        myCon->IASetInputLayout(ShipvLayout);
+        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets); 
+        myCon->IASetIndexBuffer(ishipBuffer, DXGI_FORMAT_R32_UINT, 0); 
+        myCon->VSSetShader(shipVShader, 0, 0);
+        myCon->PSSetShader(shipPShader, 0, 0);
+        myCon->IASetInputLayout(shipVLayout);
 
-        temp = XMMatrixIdentity(); //Using XMMATRIX temp for high perfomance
-        temp = XMMatrixTranslation(0, 2, 0);
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
-
-        //Setting the world matrix to not spin after anything that is drawn here
         temp = XMMatrixIdentity();
-        temp = XMMatrixTranslation(0, 3, 0); // Move it
-        temp = XMMatrixMultiply(XMMatrixScaling(6, 6, 6), temp); //Make it larger
-        temp = XMMatrixMultiply(temp2rotate, temp); //flip these if you want the object to spin around world space
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp); 
+        temp = XMMatrixTranslation(0, 10, 0); // Move it
+        temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp); //Make it larger
+
+        static float rotation = 0; rotation += 0.01;
+        XMMATRIX rotateThis = XMMatrixIdentity();
+        rotateThis = XMMatrixRotationY(rotation);
+        temp = XMMatrixMultiply(rotateThis, temp);
+
+        //temp = rotateObject(temp, 20,rotate1);
+        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
         //Telling the video card to refresh
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
         myCon->Unmap(cBuff, 0);
+
+
         //Pixel shader resources (3rd parameter expects an array: bypass with &)
-        myCon->PSSetShaderResources(0, 1, &ShipTexture);
+        myCon->PSSetShaderResources(0, 1, &shipTexture);
         //Draw it
         myCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
 
+      
+        mesh_strides[0] = { sizeof(SimpleVertex) };
+        mesh_offsets[0] = { 0 };
+        meshVB[0] = { vEarthBuffer };
+        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
+        myCon->IASetIndexBuffer(ishipBuffer, DXGI_FORMAT_R32_UINT, 0);
+        myCon->VSSetShader(earthVShader, 0, 0);
+        myCon->PSSetShader(earthPShader, 0, 0);
+        myCon->IASetInputLayout(shipVLayout);
+        temp = XMMatrixIdentity();
+        temp = XMMatrixTranslation(50, 25, 15); // Move it
+        temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp); //Make it larger
+
+        static float rotation2 = 0; rotation2 += 0.001;
+        rotateThis = XMMatrixIdentity();
+        rotateThis = XMMatrixRotationY(rotation2);
+        temp = XMMatrixMultiply(rotateThis, temp);
+
+        //temp = rotateObject(temp, 1, rotate2);
+        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+
+        hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+        *((WVP*)(gpuBuffer.pData)) = myMatricies;
+        myCon->Unmap(cBuff, 0);
 
 
-
-
+        //Pixel shader resources (3rd parameter expects an array: bypass with &)
+        myCon->PSSetShaderResources(0, 1, &earthTex);
+        //Draw it
+        myCon->DrawIndexed(earth.indicesList.size(), 0, 0);
 
       mySwap->Present(0, 0); // Telling the backbuffer (the cleared 2d texture) to swap with the front buffer
     }
@@ -306,76 +303,36 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    myPort.MinDepth = 0;
    myPort.MaxDepth = 1;
 
-   
-
-   MyVertex tri[] = //NDC space (Z space is from 0-1)
-   {
-       //xyzw, rgba
-       //Front face
-       {{0, 1, 0, 1},{1,0,0,1}},
-       {{0.25f, -0.25f, -0.25f, 1},{1,1,0,1}},
-       {{-0.25f, -0.25f, -0.25f, 1},{1,1,1,1}},
-       //Right face
-       {{0, 1, 0, 1},{1,0,0,1}},
-       {{0.25f, -0.25f, 0.25f, 1},{1,1,0,1}},
-       {{0.25f, -0.25f, -0.25f, 1},{1,1,1,1}},
-       //Back face
-       {{0, 1, 0, 1},{1,0,0,1}},
-       {{-0.25f, -0.25f, 0.25f, 1},{1,1,0,1}},
-       {{0.25f, -0.25f, 0.25f, 1},{1,1,1,1}},
-       //Left face
-       {{0, 1, 0, 1},{1,0,0,1}},
-       {{-0.25f, -0.25f, -0.25f, 1},{1,1,0,1}},
-       {{-0.25f, -0.25f, 0.25f, 1},{1,1,1,1}}
-   };
-
-   numVerts = ARRAYSIZE(tri);
-
    //Load onto grapics card
    D3D11_BUFFER_DESC bDesc;
    D3D11_SUBRESOURCE_DATA subData;
    ZeroMemory(&bDesc, sizeof(bDesc));
    ZeroMemory(&subData, sizeof(subData));
 
-   bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-   bDesc.ByteWidth = sizeof(MyVertex) * numVerts;
-   bDesc.CPUAccessFlags = 0;
-   bDesc.MiscFlags = 0;
-   bDesc.StructureByteStride = 0;
-   bDesc.Usage = D3D11_USAGE_IMMUTABLE;
-
-   subData.pSysMem = tri;
-
-   hr = myDev->CreateBuffer(&bDesc, &subData, &vBuff);
-
-   //Write, compile and load shaders
+   //START OF STONEHENGE
+   //Make matching input layout
+   D3D11_INPUT_ELEMENT_DESC meshInputDesc[] =
+   {
+       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+       {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+       {"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+   };
+   hr = myDev->CreateInputLayout(meshInputDesc, 3, MyMeshVShader, sizeof(MyMeshVShader), &vMeshLayout);
 
    hr = myDev->CreateVertexShader(MyVShader, sizeof(MyVShader), nullptr, &vShader);
    hr = myDev->CreatePixelShader(MyPShader, sizeof(MyPShader), nullptr, &pShader);
    //Convert dds into logic
-   hr = CreateDDSTextureFromFile(myDev, L"./Assets/StoneHenge.dds", nullptr, &StonehengeTexture);
-
-    //Describe vertex to D3D11
-   D3D11_INPUT_ELEMENT_DESC ieDesc[] =
-   {
-       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-       {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0}
-   };
-
-   hr = myDev->CreateInputLayout(ieDesc, 2, MyVShader, sizeof(MyVShader), &vLayout );
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/StoneHenge.dds", nullptr, &stonehengeTexture);
 
    //Create const buffer
    ZeroMemory(&bDesc, sizeof(bDesc));
-
    bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
    bDesc.ByteWidth = sizeof(WVP);
    bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
    bDesc.MiscFlags = 0;
    bDesc.StructureByteStride = 0;
    bDesc.Usage = D3D11_USAGE_DYNAMIC;
-
    hr = myDev->CreateBuffer(&bDesc, nullptr, &cBuff);
-
 
    //Load complex meshes
    bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -384,7 +341,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    bDesc.MiscFlags = 0;
    bDesc.StructureByteStride = 0;
    bDesc.Usage = D3D11_USAGE_IMMUTABLE; //IMMUTABLE = Not modifiable
-
    subData.pSysMem = StoneHenge_data;
    hr = myDev->CreateBuffer(&bDesc, &subData, &vBuffMesh); //Mesh vertex buffer
    
@@ -395,27 +351,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hr = myDev->CreateBuffer(&bDesc, &subData, &iBuffMesh);
 
    ZeroMemory(&bDesc, sizeof(bDesc));
-
-
-   //Load mesh shader
    hr = myDev->CreateVertexShader(MyMeshVShader, sizeof(MyMeshVShader), nullptr, &vMeshShader);
-   
-   //Make matching input layout
-   D3D11_INPUT_ELEMENT_DESC meshInputDesc[] =
-   {
-       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-       {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-       {"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
-   };
-   hr = myDev->CreateInputLayout(meshInputDesc, 3, MyMeshVShader, sizeof(MyMeshVShader), &vMeshLayout);
+   //END OF STONEHENGE
 
-
-   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &ShipvShader);
-   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &ShippShader);
-
-   //Make matching input layout for ship
-   LoadMesh("./Assets/WorkingShipMesh", shipMesh);
-   hr = CreateDDSTextureFromFile(myDev, L"./Assets/vette_color.dds", nullptr, &ShipTexture);  //Loading texture
 
    D3D11_INPUT_ELEMENT_DESC meshShipInputDesc[] =
    {
@@ -424,52 +362,58 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
 
    };
-   hr = myDev->CreateInputLayout(meshShipInputDesc, 3, SpaceShipVS, sizeof(SpaceShipVS), &ShipvLayout);
+   hr = myDev->CreateInputLayout(meshShipInputDesc, 3, SpaceShipVS, sizeof(SpaceShipVS), &shipVLayout);
 
-   //For skybox
-   hr = myDev->CreateVertexShader(SpaceBoxVS, sizeof(SpaceBoxVS), nullptr, &SpaceBoxV);
-   hr = myDev->CreatePixelShader(SpaceBoxPS, sizeof(SpaceBoxPS), nullptr, &SpaceBoxP);
+   //Create shaders
+   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &shipVShader);
+   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &shipPShader);
+   LoadMesh("./Assets/WorkingShipMesh", shipMesh);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/vette_color.dds", nullptr, &shipTexture);  //Loading texture
 
+   hr = myDev->CreateVertexShader(SpaceBoxVS, sizeof(SpaceBoxVS), nullptr, &spaceBoxV);
+   hr = myDev->CreatePixelShader(SpaceBoxPS, sizeof(SpaceBoxPS), nullptr, &spaceBoxPShader);
    LoadMesh("./Assets/SpaceSkyBox", skyBox);
-   hr = CreateDDSTextureFromFile(myDev, L"./Assets/Space.dds", nullptr, &SpaceBoxTex);  //Loading texture
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/Space.dds", nullptr, &spaceBoxTex);  //Loading texture
 
-   //TODO: make vertex and index buffer for spaceship using shipMesh
-      //Load complex meshes
-   bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-   bDesc.ByteWidth = sizeof(SimpleVertex) * skyBox.vertexList.size();
-   bDesc.CPUAccessFlags = 0;
-   bDesc.MiscFlags = 0;
-   bDesc.StructureByteStride = 0;
-   bDesc.Usage = D3D11_USAGE_IMMUTABLE; //IMMUTABLE = Not modifiable
+   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &earthVShader);
+   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &earthPShader);
+   LoadMesh("./Assets/EarthMesh", earth);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/EarthTexture.dds", nullptr, &earthTex);  //Loading texture
+
+
+   //Create vertex buffers
+   bDesc = SetUpVertexBuffer(bDesc,subData,skyBox, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE,0,0,0);
    subData.pSysMem = skyBox.vertexList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &vskyBoxBuffer); //Mesh vertex buffer
 
-   //Index buffer complex mesh
+   bDesc = SetUpVertexBuffer(bDesc, subData, shipMesh, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
+   subData.pSysMem = shipMesh.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vshipBuffer); //Mesh vertex buffer
+
+   bDesc = SetUpVertexBuffer(bDesc, subData, earth, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
+   subData.pSysMem = earth.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vEarthBuffer); //Mesh vertex buffer
+
+
+   //Create index buffers
    bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
    bDesc.ByteWidth = sizeof(unsigned int) * (skyBox.indicesList.size());
    subData.pSysMem = skyBox.indicesList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &iskyBoxBuffer);
 
-   //TODO: make vertex and index buffer for spaceship using shipMesh
-      //Load complex meshes
-   bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-   bDesc.ByteWidth = sizeof(SimpleVertex) * shipMesh.vertexList.size();
-   bDesc.CPUAccessFlags = 0;
-   bDesc.MiscFlags = 0;
-   bDesc.StructureByteStride = 0;
-   bDesc.Usage = D3D11_USAGE_IMMUTABLE; //IMMUTABLE = Not modifiable
-   subData.pSysMem = shipMesh.vertexList.data();
-   hr = myDev->CreateBuffer(&bDesc, &subData, &vshipBuffer); //Mesh vertex buffer
-
-   //Index buffer complex mesh
    bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
    bDesc.ByteWidth = sizeof(unsigned int) * (shipMesh.indicesList.size());
    subData.pSysMem = shipMesh.indicesList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &ishipBuffer);
 
-   //Setting up camera
-   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 }));
+   bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   bDesc.ByteWidth = sizeof(unsigned int) * (earth.indicesList.size());
+   subData.pSysMem = earth.indicesList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &iEarthBuffer);
 
+
+   //Other settings 
+   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 }));   //Setting up camera
    //Zbuffer
    D3D11_TEXTURE2D_DESC zDesc;
    ZeroMemory(&zDesc, sizeof(zDesc));
@@ -591,4 +535,32 @@ void LoadMesh(const char* meshFileName, SimpleMesh& mesh)
     }
 
     file.close();
+}
+
+D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DATA data, SimpleMesh meshVertexData, D3D11_BIND_FLAG flag, D3D11_USAGE usage, int cpuFlags, int miscFlags, int byteStride)
+{
+    //Load complex meshes
+    desc.BindFlags = flag;
+    desc.ByteWidth = sizeof(SimpleVertex) * meshVertexData.vertexList.size();
+    desc.CPUAccessFlags = cpuFlags;
+    desc.MiscFlags = miscFlags;
+    desc.StructureByteStride = byteStride;
+    desc.Usage = usage; //IMMUTABLE = Not modifiable
+
+    return desc;
+}
+
+void SetUpIndexBuffer()
+{
+
+}
+
+XMMATRIX rotateObject(XMMATRIX temp, float speed)
+{
+    //Rotating
+    static float rotation = 0; rotation += speed;
+    XMMATRIX rotateThis = XMMatrixIdentity();
+    rotateThis = XMMatrixRotationY(rotation);
+    temp = XMMatrixMultiply(rotateThis, temp); //flip these if you want the object to spin around world space
+    return temp;
 }

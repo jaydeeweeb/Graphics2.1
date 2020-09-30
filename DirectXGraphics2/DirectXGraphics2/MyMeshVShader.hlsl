@@ -14,7 +14,7 @@ struct InputVertex //Where 2 lines meet
 
 };
 
-struct OutputVertex //float4 Must match Pshader Input
+struct OutputVertex //Must match Pshader Input
 {
     float4 xyzw : SV_Position;
     float4 rgba : OCOLOR;

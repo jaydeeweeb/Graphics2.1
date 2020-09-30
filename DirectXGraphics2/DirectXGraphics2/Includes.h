@@ -36,29 +36,36 @@ ID3D11RenderTargetView* myRtv; //Pointer to a resource that can be used for draw
 D3D11_VIEWPORT myPort;
 float aspectR = 1;
 
-ID3D11Buffer* vBuff;  //Used to hold stuff
 ID3D11InputLayout* vLayout;
-ID3D11VertexShader* vShader; //HLSL
+ID3D11InputLayout* shipVLayout;
+ID3D11VertexShader* vShader;
+ID3D11VertexShader* shipVShader;
+ID3D11VertexShader* spaceBoxV;
+ID3D11VertexShader* earthVShader;
 ID3D11PixelShader* pShader;
-ID3D11ShaderResourceView* StonehengeTexture;
-ID3D11ShaderResourceView* ShipTexture;
-ID3D11InputLayout* ShipvLayout;
-ID3D11VertexShader* ShipvShader; //HLSL
-ID3D11PixelShader* ShippShader;
-ID3D11VertexShader* SpaceBoxV;
-ID3D11PixelShader* SpaceBoxP;
-ID3D11ShaderResourceView* SpaceBoxTex;
+ID3D11PixelShader* shipPShader;
+ID3D11PixelShader* spaceBoxPShader;
+ID3D11PixelShader* earthPShader;
+ID3D11ShaderResourceView* stonehengeTexture;
+ID3D11ShaderResourceView* shipTexture;
+ID3D11ShaderResourceView* spaceBoxTex;
+ID3D11ShaderResourceView* earthTex;
+
 
 //Shader variables
 ID3D11Buffer* cBuff;
 
-//mesh data
+//Buffers
+ID3D11Buffer* vBuff;  //Used to hold stuff
 ID3D11Buffer* vBuffMesh; //vertex buff
 ID3D11Buffer* iBuffMesh; //index buffer
 ID3D11Buffer* vshipBuffer; //vertex buff
 ID3D11Buffer* ishipBuffer; //index buffer
 ID3D11Buffer* vskyBoxBuffer; //vertex buff
 ID3D11Buffer* iskyBoxBuffer; //index buffer
+ID3D11Buffer* vEarthBuffer; //vertex buff
+ID3D11Buffer* iEarthBuffer; //index buffer
+
 
 //Mesh vertex data
 ID3D11VertexShader* vMeshShader;
@@ -101,6 +108,8 @@ struct SimpleMesh
 
 SimpleMesh shipMesh;
 SimpleMesh skyBox;
+SimpleMesh earth;
+
 
 
 void releaseData()
@@ -112,8 +121,8 @@ void releaseData()
     mySwap->Release();
     vShader->Release();
     pShader->Release();
-    ShippShader->Release();
-    ShipvShader->Release();
+    shipPShader->Release();
+    shipVShader->Release();
     vLayout->Release();
     myDev->Release();
     cBuff->Release();
@@ -123,5 +132,5 @@ void releaseData()
     vMeshLayout->Release();
     zBuffer->Release();
     zBufferView->Release();
-    ShipvLayout->Release();
+    shipVLayout->Release();
 }

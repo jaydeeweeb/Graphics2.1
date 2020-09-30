@@ -1,10 +1,3 @@
-//struct SimpleVertex
-//{
-//    XMFLOAT3 Pos;
-//    XMFLOAT3 Normal;
-//    XMFLOAT2 Tex;
-//};
-
 #pragma pack_matrix(row_major) // treats all matricies to row major
 
 struct InputVertex //Matches inputlayout
