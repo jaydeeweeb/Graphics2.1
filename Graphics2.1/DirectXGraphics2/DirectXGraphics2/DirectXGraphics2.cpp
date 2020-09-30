@@ -7,7 +7,7 @@ D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DA
 XMMATRIX rotateObject(XMMATRIX temp, float speed, float rotation);
 
 #define MAX_LOADSTRING 100
-//
+
 
 static float rotate1 = 0;
 static float rotate2 = 0;
