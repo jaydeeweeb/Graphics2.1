@@ -5,7 +5,9 @@
 #include "Includes.h"
 void LoadMesh(const char* meshFileName, SimpleMesh& mesh);
 D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DATA data, SimpleMesh meshVertexData, D3D11_BIND_FLAG flag, D3D11_USAGE usage, int cpuFlags, int miscFlags, int byteStride);
-XMMATRIX rotateObject(XMMATRIX temp, float speed, float rotation);
+XMMATRIX RotateObject(XMMATRIX temp, float speed);
+void SetUpContext(UINT* strides, UINT* offset, ID3D11Buffer* meshvb, UINT sizeOfVert, ID3D11Buffer* vMeshBuffer, ID3D11Buffer* iMeshBuffer, ID3D11VertexShader* meshVS,
+    ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout);
 
 #define MAX_LOADSTRING 100
 
@@ -118,43 +120,35 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->ClearDepthStencilView(zBufferView, D3D11_CLEAR_DEPTH, 1, 0);
 
 
-        //Set pipeline for stonehenge
         UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
         UINT mesh_offsets[] = { 0 };
         ID3D11Buffer* meshVB[] = { vBuffMesh };
-        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
-        myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
-        myCon->VSSetShader(vMeshShader,0,0);
-        myCon->PSSetShader(pShader, 0, 0);
-        myCon->IASetInputLayout(vMeshLayout);
-
-        //Setting the world matrix to not spin after anything that is drawn here
-        temp = XMMatrixIdentity();
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
-
-        //Telling the video card to refresh
-         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-        *((WVP*)(gpuBuffer.pData)) = myMatricies;
-
-        myCon->PSSetShaderResources(0, 1, &stonehengeTexture);
-
-        myCon->Unmap(cBuff, 0);
-        //Draw it
-        myCon->DrawIndexed(2532, 0, 0);
+        //Set pipeline for stonehenge
+        //myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
+        //myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
+        //myCon->VSSetShader(vMeshShader,0,0);
+        //myCon->PSSetShader(pShader, 0, 0);
+        //myCon->IASetInputLayout(vMeshLayout);
+        ////Setting the world matrix to not spin after anything that is drawn here
+        //temp = XMMatrixIdentity();
+        //XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
+        ////Telling the video card to refresh
+        // hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+        //*((WVP*)(gpuBuffer.pData)) = myMatricies;
+        //myCon->PSSetShaderResources(0, 1, &stonehengeTexture);
+        //myCon->Unmap(cBuff, 0);
+        ////Draw it
+        //myCon->DrawIndexed(2532, 0, 0);
 
 
         //Set pipeline for spaceship
         mesh_strides[0] = { sizeof(SimpleVertex) };
         mesh_offsets[0] = { 0 };
         meshVB[0] = { vshipBuffer };
-        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets); 
-        myCon->IASetIndexBuffer(ishipBuffer, DXGI_FORMAT_R32_UINT, 0); 
-        myCon->VSSetShader(shipVShader, 0, 0);
-        myCon->PSSetShader(shipPShader, 0, 0);
-        myCon->IASetInputLayout(shipVLayout);
+        SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vshipBuffer, ishipBuffer, shipVShader, shipPShader, shipVLayout);
 
         temp = XMMatrixIdentity();
-        temp = XMMatrixTranslation(0, 10, 0); // Move it
+        temp = XMMatrixTranslation(60, 30, 0); // Move it
         temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp); //Make it larger
 
         static float rotation = 0; rotation += 0.01;
@@ -175,17 +169,35 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         //Draw it
         myCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
 
-      
         mesh_strides[0] = { sizeof(SimpleVertex) };
         mesh_offsets[0] = { 0 };
-        meshVB[0] = { vEarthBuffer };
-        myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
-        myCon->IASetIndexBuffer(ishipBuffer, DXGI_FORMAT_R32_UINT, 0);
-        myCon->VSSetShader(earthVShader, 0, 0);
-        myCon->PSSetShader(earthPShader, 0, 0);
-        myCon->IASetInputLayout(shipVLayout);
+        meshVB[0] = { vsunBuffer };
+        SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vsunBuffer, isunBuffer, sunVShader, sunPShader, shipVLayout);
         temp = XMMatrixIdentity();
-        temp = XMMatrixTranslation(50, 25, 15); // Move it
+        temp = XMMatrixMultiply(XMMatrixScaling(6, 6, 6), temp); //Make it larger
+        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+
+        static float rotation4 = 0; rotation4 += 0.0005;
+        rotateThis = XMMatrixIdentity();
+        rotateThis = XMMatrixRotationY(rotation4);
+        temp = XMMatrixMultiply(rotateThis, temp);
+
+        //temp = rotateObject(temp, 1, rotate2);
+        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+
+        hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+        *((WVP*)(gpuBuffer.pData)) = myMatricies;
+        myCon->Unmap(cBuff, 0);
+
+        //Pixel shader resources (3rd parameter expects an array: bypass with &)
+        myCon->PSSetShaderResources(0, 1, &sunTex);
+        //Draw it
+        myCon->DrawIndexed(sun.indicesList.size(), 0, 0);
+      
+
+        SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vEarthBuffer, iEarthBuffer, earthVShader, earthPShader, shipVLayout);
+        temp = XMMatrixIdentity();
+        temp = XMMatrixTranslation(60, 0, 0); // Move it
         temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp); //Make it larger
 
         static float rotation2 = 0; rotation2 += 0.001;
@@ -200,11 +212,32 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
         myCon->Unmap(cBuff, 0);
 
-
         //Pixel shader resources (3rd parameter expects an array: bypass with &)
         myCon->PSSetShaderResources(0, 1, &earthTex);
         //Draw it
         myCon->DrawIndexed(earth.indicesList.size(), 0, 0);
+
+
+        SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vmoonBuffer, imoonBuffer, moonVShader, moonPShader, shipVLayout);
+
+        temp = XMMatrixTranslation(75, 5, 0); // Move it
+        temp = XMMatrixMultiply(XMMatrixScaling(0.7, 0.7, 0.7), temp); //Make it larger
+        static float rotation3 = 0; rotation3 += 0.0001;
+        rotateThis = XMMatrixIdentity();
+        rotateThis = XMMatrixRotationY(rotation3);
+        temp = XMMatrixMultiply(temp, rotateThis);
+
+        //temp = rotateObject(temp, 1, rotate2);
+        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+
+        hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+        *((WVP*)(gpuBuffer.pData)) = myMatricies;
+        myCon->Unmap(cBuff, 0);
+
+        //Pixel shader resources (3rd parameter expects an array: bypass with &)
+        myCon->PSSetShaderResources(0, 1, &moonTex);
+        //Draw it
+        myCon->DrawIndexed(moon.indicesList.size(), 0, 0);
 
       mySwap->Present(0, 0); // Telling the backbuffer (the cleared 2d texture) to swap with the front buffer
     }
@@ -381,6 +414,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    LoadMesh("./Assets/EarthMesh", earth);
    hr = CreateDDSTextureFromFile(myDev, L"./Assets/EarthTexture.dds", nullptr, &earthTex);  //Loading texture
 
+   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &moonVShader);
+   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &moonPShader);
+   LoadMesh("./Assets/MoonMesh", moon);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/moonTexture.dds", nullptr, &moonTex);  //Loading texture
+
+   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &sunVShader);
+   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &sunPShader);
+   LoadMesh("./Assets/SunMesh", sun);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/Sun.dds", nullptr, &sunTex);  //Loading texture
+
 
    //Create vertex buffers
    bDesc = SetUpVertexBuffer(bDesc,subData,skyBox, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE,0,0,0);
@@ -394,6 +437,14 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    bDesc = SetUpVertexBuffer(bDesc, subData, earth, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
    subData.pSysMem = earth.vertexList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &vEarthBuffer); //Mesh vertex buffer
+
+   bDesc = SetUpVertexBuffer(bDesc, subData, moon, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
+   subData.pSysMem = moon.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vmoonBuffer); //Mesh vertex buffer
+
+   bDesc = SetUpVertexBuffer(bDesc, subData, sun, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
+   subData.pSysMem = sun.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vsunBuffer); //Mesh vertex buffer
 
 
    //Create index buffers
@@ -411,6 +462,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    bDesc.ByteWidth = sizeof(unsigned int) * (earth.indicesList.size());
    subData.pSysMem = earth.indicesList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &iEarthBuffer);
+
+   bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   bDesc.ByteWidth = sizeof(unsigned int) * (moon.indicesList.size());
+   subData.pSysMem = moon.indicesList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &imoonBuffer);
+
+   bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   bDesc.ByteWidth = sizeof(unsigned int) * (sun.indicesList.size());
+   subData.pSysMem = sun.indicesList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &isunBuffer);
 
 
    //Other settings 
@@ -551,12 +612,7 @@ D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DA
     return desc;
 }
 
-void SetUpIndexBuffer()
-{
-
-}
-
-XMMATRIX rotateObject(XMMATRIX temp, float speed)
+XMMATRIX RotateObject(XMMATRIX temp, float speed)
 {
     //Rotating
     static float rotation = 0; rotation += speed;
@@ -564,4 +620,17 @@ XMMATRIX rotateObject(XMMATRIX temp, float speed)
     rotateThis = XMMatrixRotationY(rotation);
     temp = XMMatrixMultiply(rotateThis, temp); //flip these if you want the object to spin around world space
     return temp;
+}
+
+void SetUpContext(UINT* strides,UINT* offset, ID3D11Buffer* meshvb, UINT sizeOfVert, ID3D11Buffer* vMeshBuffer, ID3D11Buffer* iMeshBuffer, ID3D11VertexShader* meshVS,
+ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout)
+{
+    strides[0] = { sizeOfVert };
+    offset[0] = { 0 };
+    meshvb[0] = { *vMeshBuffer };
+    myCon->IASetVertexBuffers(0, 1, &meshvb, strides, offset);
+    myCon->IASetIndexBuffer(iMeshBuffer, DXGI_FORMAT_R32_UINT, 0);
+    myCon->VSSetShader(meshVS, 0, 0);
+    myCon->PSSetShader(meshPS, 0, 0);
+    myCon->IASetInputLayout(meshVLayout);
 }

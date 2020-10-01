@@ -7,7 +7,7 @@ struct InputVertex //Matches inputlayout
     float2 tex : TEXCOORD;
 };
 
-struct OutputVertex //float4 Must match Pshader Input
+struct OutputVertex //Must match Pshader Input
 {
     float4 xyzw : SV_Position;
     float3 nrm : ONORMAL;

@@ -42,14 +42,21 @@ ID3D11VertexShader* vShader;
 ID3D11VertexShader* shipVShader;
 ID3D11VertexShader* spaceBoxV;
 ID3D11VertexShader* earthVShader;
+ID3D11VertexShader* moonVShader;
+ID3D11VertexShader* sunVShader;
 ID3D11PixelShader* pShader;
 ID3D11PixelShader* shipPShader;
 ID3D11PixelShader* spaceBoxPShader;
 ID3D11PixelShader* earthPShader;
+ID3D11PixelShader* moonPShader;
+ID3D11PixelShader* sunPShader;
 ID3D11ShaderResourceView* stonehengeTexture;
 ID3D11ShaderResourceView* shipTexture;
 ID3D11ShaderResourceView* spaceBoxTex;
 ID3D11ShaderResourceView* earthTex;
+ID3D11ShaderResourceView* moonTex;
+ID3D11ShaderResourceView* sunTex;
+
 
 
 //Shader variables
@@ -65,6 +72,10 @@ ID3D11Buffer* vskyBoxBuffer; //vertex buff
 ID3D11Buffer* iskyBoxBuffer; //index buffer
 ID3D11Buffer* vEarthBuffer; //vertex buff
 ID3D11Buffer* iEarthBuffer; //index buffer
+ID3D11Buffer* vmoonBuffer; //vertex buff
+ID3D11Buffer* imoonBuffer; //index buffer
+ID3D11Buffer* vsunBuffer; //vertex buff
+ID3D11Buffer* isunBuffer; //index buffer
 
 
 //Mesh vertex data
@@ -109,7 +120,8 @@ struct SimpleMesh
 SimpleMesh shipMesh;
 SimpleMesh skyBox;
 SimpleMesh earth;
-
+SimpleMesh moon;
+SimpleMesh sun;
 
 
 void releaseData()
