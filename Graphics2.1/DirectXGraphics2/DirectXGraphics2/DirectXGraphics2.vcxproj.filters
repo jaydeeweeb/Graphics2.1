@@ -75,5 +75,8 @@
     <FxCompile Include="SpaceShipVS.hlsl" />
     <FxCompile Include="SpaceBoxPS.hlsl" />
     <FxCompile Include="SpaceBoxVS.hlsl" />
+    <FxCompile Include="MultiTexturePS.hlsl">
+      <Filter>Source Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -1,6 +1,5 @@
 // DirectXGraphics2.cpp : Defines the entry point for the application.
 //
-////
 
 #include "Includes.h"
 void LoadMesh(const char* meshFileName, SimpleMesh& mesh);
@@ -10,7 +9,6 @@ void SetUpContext(UINT* strides, UINT* offset, ID3D11Buffer* meshvb, UINT sizeOf
     ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout);
 
 #define MAX_LOADSTRING 100
-
 
 static float rotate1 = 0;
 static float rotate2 = 0;
@@ -54,7 +52,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     XTime timer;
     timer.Restart();
 
-
     // Main message loop: This is where the drawing happens
     while (true)//GetMessage(&msg, nullptr, 0, 0))
     {
@@ -90,12 +87,26 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         HRESULT hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
         myCon->Unmap(cBuff, 0);
-
         //Connect const buffer to pipeline
         //HLSL matricies are column major (we need to make it row major)
         ID3D11Buffer* constants[] = { cBuff };
         myCon->VSSetConstantBuffers(0, 1, constants);
 
+
+
+        XMStoreFloat4(&lightingMatricies.camPos, camera.r[3]); //Storing matrix
+        XMStoreFloat4(&lightingMatricies.dirLightColor, light.r[0]);
+        XMStoreFloat4(&lightingMatricies.dirLightDirection, light.r[1]);
+
+        D3D11_MAPPED_SUBRESOURCE gpuBufferLight;
+        hr = myCon->Map(cBuffLighting, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferLight);
+        *((LightingBufferData*)(gpuBufferLight.pData)) = lightingMatricies;
+        myCon->Unmap(cBuffLighting, 0);
+        //Connect const buffer to pipeline
+        //HLSL matricies are column major (we need to make it row major)
+        ID3D11Buffer* lightingconstants[] = { cBuffLighting };
+        //myCon->VSSetConstantBuffers(0, 1, lightingconstants);
+        myCon->PSSetConstantBuffers(0, 1, lightingconstants);
 
         //SkyBox setup
         UINT mesh_strides1[] = { sizeof(SimpleVertex) };
@@ -149,32 +160,29 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
         temp = XMMatrixIdentity();
         temp = XMMatrixTranslation(60, 30, 0); // Move it
-        temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp); //Make it larger
-
-        static float rotation = 0; rotation += 0.01;
+        temp = XMMatrixMultiply(XMMatrixScaling(2, 2, 2), temp); //Make it larger
+        static float rotation = 0; rotation += 0.0005;
         XMMATRIX rotateThis = XMMatrixIdentity();
         rotateThis = XMMatrixRotationY(rotation);
         temp = XMMatrixMultiply(rotateThis, temp);
-
-        //temp = rotateObject(temp, 20,rotate1);
         XMStoreFloat4x4(&myMatricies.wMatrix, temp);
         //Telling the video card to refresh
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
         myCon->Unmap(cBuff, 0);
 
-
         //Pixel shader resources (3rd parameter expects an array: bypass with &)
         myCon->PSSetShaderResources(0, 1, &shipTexture);
         //Draw it
         myCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
+
 
         mesh_strides[0] = { sizeof(SimpleVertex) };
         mesh_offsets[0] = { 0 };
         meshVB[0] = { vsunBuffer };
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vsunBuffer, isunBuffer, sunVShader, sunPShader, shipVLayout);
         temp = XMMatrixIdentity();
-        temp = XMMatrixMultiply(XMMatrixScaling(6, 6, 6), temp); //Make it larger
+        temp = XMMatrixMultiply(XMMatrixScaling(11, 11, 11), temp); //Make it larger
         XMStoreFloat4x4(&myMatricies.wMatrix, temp);
 
         static float rotation4 = 0; rotation4 += 0.0005;
@@ -193,17 +201,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->PSSetShaderResources(0, 1, &sunTex);
         //Draw it
         myCon->DrawIndexed(sun.indicesList.size(), 0, 0);
-      
+        
 
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vEarthBuffer, iEarthBuffer, earthVShader, earthPShader, shipVLayout);
         temp = XMMatrixIdentity();
-        temp = XMMatrixTranslation(60, 0, 0); // Move it
+        temp = XMMatrixTranslation(80, 0, 0); // Move it
         temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp); //Make it larger
 
         static float rotation2 = 0; rotation2 += 0.001;
         rotateThis = XMMatrixIdentity();
         rotateThis = XMMatrixRotationY(rotation2);
         temp = XMMatrixMultiply(rotateThis, temp);
+        static float r2 = 0; r2 += 0.0001;
+        rotateThis = XMMatrixIdentity();
+        rotateThis = XMMatrixRotationY(r2);
+        temp = XMMatrixMultiply(temp, rotateThis);
+
 
         //temp = rotateObject(temp, 1, rotate2);
         XMStoreFloat4x4(&myMatricies.wMatrix, temp);
@@ -220,7 +233,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vmoonBuffer, imoonBuffer, moonVShader, moonPShader, shipVLayout);
 
-        temp = XMMatrixTranslation(75, 5, 0); // Move it
+        temp = XMMatrixTranslation(95, 5, 0); // Move it
         temp = XMMatrixMultiply(XMMatrixScaling(0.7, 0.7, 0.7), temp); //Make it larger
         static float rotation3 = 0; rotation3 += 0.0001;
         rotateThis = XMMatrixIdentity();
@@ -343,6 +356,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ZeroMemory(&bDesc, sizeof(bDesc));
    ZeroMemory(&subData, sizeof(subData));
 
+   D3D11_BUFFER_DESC bDescLighting;
+   D3D11_SUBRESOURCE_DATA subDataLighting;
+   ZeroMemory(&bDescLighting, sizeof(bDescLighting));
+   ZeroMemory(&subDataLighting, sizeof(subDataLighting));
+
+
    //START OF STONEHENGE
    //Make matching input layout
    D3D11_INPUT_ELEMENT_DESC meshInputDesc[] =
@@ -367,6 +386,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    bDesc.StructureByteStride = 0;
    bDesc.Usage = D3D11_USAGE_DYNAMIC;
    hr = myDev->CreateBuffer(&bDesc, nullptr, &cBuff);
+
+   //Create const buffer
+   ZeroMemory(&bDescLighting, sizeof(bDescLighting));
+   bDescLighting.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+   bDescLighting.ByteWidth = sizeof(LightingBufferData);
+   bDescLighting.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+   bDescLighting.MiscFlags = 0;
+   bDescLighting.StructureByteStride = 0;
+   bDescLighting.Usage = D3D11_USAGE_DYNAMIC;
+   hr = myDev->CreateBuffer(&bDescLighting, nullptr, &cBuffLighting);
 
    //Load complex meshes
    bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -398,11 +427,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    };
    hr = myDev->CreateInputLayout(meshShipInputDesc, 3, SpaceShipVS, sizeof(SpaceShipVS), &shipVLayout);
 
+
    //Create shaders
    hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &shipVShader);
    hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &shipPShader);
    LoadMesh("./Assets/WorkingShipMesh", shipMesh);
-   hr = CreateDDSTextureFromFile(myDev, L"./Assets/vette_color.dds", nullptr, &shipTexture);  //Loading texture
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/SpaceStation.dds", nullptr, &shipTexture);  //Loading texture
 
    hr = myDev->CreateVertexShader(SpaceBoxVS, sizeof(SpaceBoxVS), nullptr, &spaceBoxV);
    hr = myDev->CreatePixelShader(SpaceBoxPS, sizeof(SpaceBoxPS), nullptr, &spaceBoxPShader);
@@ -474,8 +504,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hr = myDev->CreateBuffer(&bDesc, &subData, &isunBuffer);
 
 
-   //Other settings 
+   //Other settings for constant buffer's
    camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 }));   //Setting up camera
+   light.r[0] = { 1,1,0 };  //dirLightColor RGB
+   light.r[1] = { 0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
+
    //Zbuffer
    D3D11_TEXTURE2D_DESC zDesc;
    ZeroMemory(&zDesc, sizeof(zDesc));

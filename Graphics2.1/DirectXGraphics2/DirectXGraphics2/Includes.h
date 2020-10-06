@@ -61,6 +61,8 @@ ID3D11ShaderResourceView* sunTex;
 
 //Shader variables
 ID3D11Buffer* cBuff;
+ID3D11Buffer* cBuffLighting;
+
 
 //Buffers
 ID3D11Buffer* vBuff;  //Used to hold stuff
@@ -87,6 +89,7 @@ ID3D11Texture2D* zBuffer;
 ID3D11DepthStencilView* zBufferView;
 
 XMMATRIX camera;
+XMMATRIX light;
 
 //Math stuff
 
@@ -103,6 +106,14 @@ struct WVP //World View Projection
     XMFLOAT4X4 vMatrix;
     XMFLOAT4X4 pMatrix;
 }myMatricies;
+
+struct LightingBufferData
+{
+    XMFLOAT4 dirLightDirection;
+    XMFLOAT4 dirLightColor;
+    XMFLOAT4 camPos;
+    XMFLOAT4 padding;
+}lightingMatricies;
 
 struct SimpleVertex
 {
