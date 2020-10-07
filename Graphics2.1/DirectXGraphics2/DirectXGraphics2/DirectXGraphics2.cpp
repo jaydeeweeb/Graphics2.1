@@ -506,7 +506,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    //Other settings for constant buffer's
    camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 }));   //Setting up camera
-   light.r[0] = { 1,1,0 };  //dirLightColor RGB
+   light.r[0] = { 1,1,1 };  //dirLightColor RGBsdsad
    light.r[1] = { 0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
 
    //Zbuffer
