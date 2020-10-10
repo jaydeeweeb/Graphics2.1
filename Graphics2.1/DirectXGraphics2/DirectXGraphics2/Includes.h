@@ -22,6 +22,8 @@ using namespace std;
 #include "DDSTextureLoader.h"
 #include "SpaceBoxVS.csh"
 #include "SpaceBoxPS.csh"
+#include "SunVS.csh"
+#include "SunPS.csh"
 
 //Mesh
 #include"Assets/StoneHenge.h"
@@ -36,7 +38,7 @@ ID3D11RenderTargetView* myRtv; //Pointer to a resource that can be used for draw
 D3D11_VIEWPORT myPort;
 float aspectR = 1;
 
-ID3D11InputLayout* vLayout;
+//ID3D11InputLayout* vLayout;
 ID3D11InputLayout* shipVLayout;
 ID3D11VertexShader* vShader;
 ID3D11VertexShader* shipVShader;
@@ -65,7 +67,7 @@ ID3D11Buffer* cBuffLighting;
 
 
 //Buffers
-ID3D11Buffer* vBuff;  //Used to hold stuff
+//ID3D11Buffer* vBuff;  //Used to hold stuff
 ID3D11Buffer* vBuffMesh; //vertex buff
 ID3D11Buffer* iBuffMesh; //index buffer
 ID3D11Buffer* vshipBuffer; //vertex buff
@@ -89,7 +91,9 @@ ID3D11Texture2D* zBuffer;
 ID3D11DepthStencilView* zBufferView;
 
 XMMATRIX camera;
-XMMATRIX light;
+XMMATRIX dirLight;
+XMMATRIX pointLight;
+
 
 //Math stuff
 
@@ -109,6 +113,8 @@ struct WVP //World View Projection
 
 struct LightingBufferData
 {
+    XMFLOAT4 pointLightPosition;
+    XMFLOAT4 pointLightColor;
     XMFLOAT4 dirLightDirection;
     XMFLOAT4 dirLightColor;
     XMFLOAT4 camPos;
@@ -128,6 +134,8 @@ struct SimpleMesh
     vector<int> indicesList;
 };
 
+SimpleVertex starsArray[1000];
+
 SimpleMesh shipMesh;
 SimpleMesh skyBox;
 SimpleMesh earth;
@@ -138,22 +146,51 @@ SimpleMesh sun;
 void releaseData()
 {
     //Release D3D11 interfaces (TO MAKE SURE ALL INTERFACES ARE RELEASED CHECK OUTPUT WINDOW FOR "LIVE OBJECTS"
-    myRtv->Release();
-    vBuff->Release();
-    myCon->Release();
-    mySwap->Release();
-    vShader->Release();
-    pShader->Release();
-    shipPShader->Release();
-    shipVShader->Release();
-    vLayout->Release();
     myDev->Release();
-    cBuff->Release();
-    vBuffMesh->Release();
-    iBuffMesh->Release();
-    vMeshShader->Release();
-    vMeshLayout->Release();
-    zBuffer->Release();
-    zBufferView->Release();
-    shipVLayout->Release();
+        mySwap->Release();
+        myCon->Release();
+        myRtv->Release();
+        //myPort->Release();  ???
+        //vLayout->Release();
+        shipVLayout->Release();
+        vShader->Release();
+        shipVShader->Release();
+        spaceBoxV->Release();
+        earthVShader->Release();
+        moonVShader->Release();
+        sunVShader->Release();
+        pShader->Release();
+        shipPShader->Release();
+        spaceBoxPShader->Release();
+        earthPShader->Release();
+        moonPShader->Release();
+        sunPShader->Release();
+        stonehengeTexture->Release();
+        shipTexture->Release();
+        spaceBoxTex->Release();
+        earthTex->Release();
+        moonTex->Release();
+        sunTex->Release();
+        cBuff->Release();
+        cBuffLighting->Release();
+        //vBuff->Release();
+        vBuffMesh->Release();
+        iBuffMesh->Release();
+        vshipBuffer->Release();
+        ishipBuffer->Release();
+        vskyBoxBuffer->Release();
+        iskyBoxBuffer->Release();
+        vEarthBuffer->Release();
+        iEarthBuffer->Release();
+        vmoonBuffer->Release();
+        imoonBuffer->Release();
+        vsunBuffer->Release();
+        isunBuffer->Release();
+        vMeshShader->Release();
+        vMeshLayout->Release();
+        zBuffer->Release();
+        zBufferView->Release();
+
+
+
 }

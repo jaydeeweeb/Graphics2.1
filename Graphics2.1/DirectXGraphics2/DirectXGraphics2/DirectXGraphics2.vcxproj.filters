@@ -78,5 +78,9 @@
     <FxCompile Include="MultiTexturePS.hlsl">
       <Filter>Source Files</Filter>
     </FxCompile>
+    <FxCompile Include="SunVS.hlsl">
+      <Filter>Source Files</Filter>
+    </FxCompile>
+    <FxCompile Include="SunPS.hlsl" />
   </ItemGroup>
 </Project>

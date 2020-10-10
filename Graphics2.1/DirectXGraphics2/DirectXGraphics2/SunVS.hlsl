@@ -7,12 +7,11 @@ struct InputVertex //Matches inputlayout
     float2 tex : TEXCOORD;
 };
 
-struct OutputVertex //Must match Pshader Output
+struct OutputVertex //float4 Must match Pshader Input
 {
     float4 xyzw : SV_Position;
     float3 nrm : ONORMAL;
     float2 tex : OTEXCOORD;
-    float3 worldPos : POSITION;
 };
 
 
@@ -31,9 +30,7 @@ OutputVertex main(InputVertex Input)
     output.xyzw = float4(Input.pos, 1.0f);
 
     //Math (shader intrinsics)
-    output.nrm = mul(float4(Input.nrm, 0), worldMatrix); //Making the object properly display lighting with rotation
     output.xyzw = mul(output.xyzw, worldMatrix);
-    output.worldPos = output.xyzw;
     output.xyzw = mul(output.xyzw, viewMatrix);
     output.xyzw = mul(output.xyzw, projectionMatrix);
     //Don't do perspectve divide, rasterizer will do that for us

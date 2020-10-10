@@ -95,8 +95,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 
         XMStoreFloat4(&lightingMatricies.camPos, camera.r[3]); //Storing matrix
-        XMStoreFloat4(&lightingMatricies.dirLightColor, light.r[0]);
-        XMStoreFloat4(&lightingMatricies.dirLightDirection, light.r[1]);
+        XMStoreFloat4(&lightingMatricies.dirLightColor, dirLight.r[0]);
+        XMStoreFloat4(&lightingMatricies.dirLightDirection, dirLight.r[1]);
+        XMStoreFloat4(&lightingMatricies.pointLightPosition, pointLight.r[0]);
+        XMStoreFloat4(&lightingMatricies.pointLightColor, pointLight.r[1]);
+
 
         D3D11_MAPPED_SUBRESOURCE gpuBufferLight;
         hr = myCon->Map(cBuffLighting, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferLight);
@@ -185,7 +188,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         temp = XMMatrixMultiply(XMMatrixScaling(11, 11, 11), temp); //Make it larger
         XMStoreFloat4x4(&myMatricies.wMatrix, temp);
 
-        static float rotation4 = 0; rotation4 += 0.0005;
+        static float rotation4 = 0; rotation4 += 0.00009;
         rotateThis = XMMatrixIdentity();
         rotateThis = XMMatrixRotationY(rotation4);
         temp = XMMatrixMultiply(rotateThis, temp);
@@ -229,7 +232,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->PSSetShaderResources(0, 1, &earthTex);
         //Draw it
         myCon->DrawIndexed(earth.indicesList.size(), 0, 0);
-
+    
 
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vmoonBuffer, imoonBuffer, moonVShader, moonPShader, shipVLayout);
 
@@ -449,8 +452,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    LoadMesh("./Assets/MoonMesh", moon);
    hr = CreateDDSTextureFromFile(myDev, L"./Assets/moonTexture.dds", nullptr, &moonTex);  //Loading texture
 
-   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &sunVShader);
-   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &sunPShader);
+   hr = myDev->CreateVertexShader(SunVS, sizeof(SunVS), nullptr, &sunVShader);
+   hr = myDev->CreatePixelShader(SunPS, sizeof(SunPS), nullptr, &sunPShader);
    LoadMesh("./Assets/SunMesh", sun);
    hr = CreateDDSTextureFromFile(myDev, L"./Assets/Sun.dds", nullptr, &sunTex);  //Loading texture
 
@@ -506,8 +509,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    //Other settings for constant buffer's
    camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 }));   //Setting up camera
-   light.r[0] = { 1,1,1 };  //dirLightColor RGBsdsad
-   light.r[1] = { 0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
+   dirLight.r[0] = { 1,1,1 };  //dirLightColor RGB
+   dirLight.r[1] = { -0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
+   pointLight.r[0] = {0, 0, 0 }; //pointLightPosition XYZ
+   pointLight.r[1] = { 1,0.8f,0 };
 
    //Zbuffer
    D3D11_TEXTURE2D_DESC zDesc;
