@@ -47,14 +47,14 @@ float4 directionalLight(OutputVertex inputPixel)
     float4 surfaceColor = txDiffuse.Sample(samLinear, inputPixel.tex.xy);
     float attenuation = saturate(dot(-normLightDir, inputPixel.nrm));
 
-   /* float3 reflectVec = reflect(normLightDir, inputPixel.nrm);
+    float3 reflectVec = reflect(normLightDir, inputPixel.nrm);
     float3 toCamera = normalize(camPos - inputPixel.worldPos);
     float specAllignment = saturate(dot(reflectVec, toCamera));
     specAllignment = pow(specAllignment, 32);
-    float4 finalSpecColor = float4(1, 1, 1, 1) * float4(1, 1, 1, 1) * specAllignment;*/  //vSurfaceSpecColor (usually white, could come from SpecMap texture) * vLightSpecColor (white, or light color) * specAllignment;
+    float4 finalSpecColor = float4(1, 1, 1, 1) * float4(1, 1, 1, 1) * specAllignment;  //vSurfaceSpecColor (usually white, could come from SpecMap texture) * vLightSpecColor (white, or light color) * specAllignment;
 
     float4 finalDirLightColor = dirLightColor * surfaceColor * attenuation;
-    return finalDirLightColor;// +finalSpecColor;
+    return finalDirLightColor + finalSpecColor;
 
 
     //LIGHTRATIO = CLAMP(DOT(-LIGHTDIR, SURFACENORMAL))

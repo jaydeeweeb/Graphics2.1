@@ -512,7 +512,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    dirLight.r[0] = { 1,1,1 };  //dirLightColor RGB
    dirLight.r[1] = { -0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
    pointLight.r[0] = {0, 0, 0 }; //pointLightPosition XYZ
-   pointLight.r[1] = { 1,0.8f,0 };
+   pointLight.r[1] = { 1,0.8f,1 };
 
    //Zbuffer
    D3D11_TEXTURE2D_DESC zDesc;
