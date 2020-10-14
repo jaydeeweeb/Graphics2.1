@@ -2,16 +2,13 @@
 //
 
 #include "Includes.h"
-void LoadMesh(const char* meshFileName, SimpleMesh& mesh);
-D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DATA data, SimpleMesh meshVertexData, D3D11_BIND_FLAG flag, D3D11_USAGE usage, int cpuFlags, int miscFlags, int byteStride);
-XMMATRIX RotateObject(XMMATRIX temp, float speed);
-void SetUpContext(UINT* strides, UINT* offset, ID3D11Buffer* meshvb, UINT sizeOfVert, ID3D11Buffer* vMeshBuffer, ID3D11Buffer* iMeshBuffer, ID3D11VertexShader* meshVS,
-    ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout);
-
 #define MAX_LOADSTRING 100
 
-static float rotate1 = 0;
-static float rotate2 = 0;
+void LoadMesh(const char* meshFileName, SimpleMesh& mesh);
+D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DATA data, SimpleMesh meshVertexData, D3D11_BIND_FLAG flag, D3D11_USAGE usage, int cpuFlags, int miscFlags, int byteStride);
+void YRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal);
+void SetUpContext(UINT* strides, UINT* offset, ID3D11Buffer* meshvb, UINT sizeOfVert, ID3D11Buffer* vMeshBuffer, ID3D11Buffer* iMeshBuffer, ID3D11VertexShader* meshVS,
+    ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout);
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -52,6 +49,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     XTime timer;
     timer.Restart();
 
+    //Set matricies
+    XMMATRIX temp;
+
+    shipMatrix = XMMatrixIdentity();
+    shipMatrix = XMMatrixTranslation(60, 30, 0); // Move it
+    shipMatrix = XMMatrixMultiply(XMMatrixScaling(2, 2, 2), shipMatrix); //Make it larger
+    XMStoreFloat4x4(&myMatricies.wMatrix, shipMatrix); //Storing matrix
+
+    sunMatrix = XMMatrixIdentity();
+    sunMatrix = XMMatrixMultiply(XMMatrixScaling(11, 11, 11), sunMatrix); //Make it larger
+    XMStoreFloat4x4(&myMatricies.wMatrix, sunMatrix);
+
+    earthMatrix = XMMatrixIdentity();
+    earthMatrix = XMMatrixTranslation(80, 0, 0);
+    earthMatrix = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), earthMatrix);
+    XMStoreFloat4x4(&myMatricies.wMatrix, earthMatrix); //Storing matrix
+
+    moonMatrix = XMMatrixIdentity();
+    moonMatrix = XMMatrixTranslation(95, 5, 0); // Move it
+    moonMatrix = XMMatrixMultiply(XMMatrixScaling(0.7, 0.7, 0.7), moonMatrix); //Make it smaller
+    XMStoreFloat4x4(&myMatricies.wMatrix, moonMatrix); //Storing matrix
+
     // Main message loop: This is where the drawing happens
     while (true)//GetMessage(&msg, nullptr, 0, 0))
     {
@@ -79,6 +98,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         camera = cameraMovement(camera, timer.Delta());
         XMStoreFloat4x4(&myMatricies.vMatrix, XMMatrixInverse(nullptr, camera)); //Storing matrix
 
+
         //projection
         temp = XMMatrixPerspectiveFovLH(3.14f / 2.0f, aspectR, 0.1f, 1000);
         XMStoreFloat4x4(&myMatricies.pMatrix, temp); //Storing matrix
@@ -93,12 +113,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->VSSetConstantBuffers(0, 1, constants);
 
 
-
+        YRotation(dirLight, 0.01, false);
+        //YRotation(pointLight, 0.01, true);
         XMStoreFloat4(&lightingMatricies.camPos, camera.r[3]); //Storing matrix
         XMStoreFloat4(&lightingMatricies.dirLightColor, dirLight.r[0]);
-        XMStoreFloat4(&lightingMatricies.dirLightDirection, dirLight.r[1]);
-        XMStoreFloat4(&lightingMatricies.pointLightPosition, pointLight.r[0]);
-        XMStoreFloat4(&lightingMatricies.pointLightColor, pointLight.r[1]);
+        XMStoreFloat4(&lightingMatricies.dirLightDirection, dirLight.r[3]);
+        XMStoreFloat4(&lightingMatricies.pointLightColor, pointLight.r[0]);
+        XMStoreFloat4(&lightingMatricies.pointLightPosition, pointLight.r[3]);
 
 
         D3D11_MAPPED_SUBRESOURCE gpuBufferLight;
@@ -137,23 +158,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         UINT mesh_strides[] = { sizeof(_OBJ_VERT_) };
         UINT mesh_offsets[] = { 0 };
         ID3D11Buffer* meshVB[] = { vBuffMesh };
-        //Set pipeline for stonehenge
-        //myCon->IASetVertexBuffers(0, 1, meshVB, mesh_strides, mesh_offsets);
-        //myCon->IASetIndexBuffer(iBuffMesh, DXGI_FORMAT_R32_UINT, 0);
-        //myCon->VSSetShader(vMeshShader,0,0);
-        //myCon->PSSetShader(pShader, 0, 0);
-        //myCon->IASetInputLayout(vMeshLayout);
-        ////Setting the world matrix to not spin after anything that is drawn here
-        //temp = XMMatrixIdentity();
-        //XMStoreFloat4x4(&myMatricies.wMatrix, temp); //Storing matrix
-        ////Telling the video card to refresh
-        // hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-        //*((WVP*)(gpuBuffer.pData)) = myMatricies;
-        //myCon->PSSetShaderResources(0, 1, &stonehengeTexture);
-        //myCon->Unmap(cBuff, 0);
-        ////Draw it
-        //myCon->DrawIndexed(2532, 0, 0);
-
+        
 
         //Set pipeline for spaceship
         mesh_strides[0] = { sizeof(SimpleVertex) };
@@ -161,14 +166,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         meshVB[0] = { vshipBuffer };
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vshipBuffer, ishipBuffer, shipVShader, shipPShader, shipVLayout);
 
-        temp = XMMatrixIdentity();
-        temp = XMMatrixTranslation(60, 30, 0); // Move it
-        temp = XMMatrixMultiply(XMMatrixScaling(2, 2, 2), temp); //Make it larger
         static float rotation = 0; rotation += 0.0005;
         XMMATRIX rotateThis = XMMatrixIdentity();
         rotateThis = XMMatrixRotationY(rotation);
-        temp = XMMatrixMultiply(rotateThis, temp);
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+
+        YRotation(shipMatrix, 0.0005, true);
+        XMStoreFloat4x4(&myMatricies.wMatrix, shipMatrix);
         //Telling the video card to refresh
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
@@ -184,17 +187,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         mesh_offsets[0] = { 0 };
         meshVB[0] = { vsunBuffer };
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vsunBuffer, isunBuffer, sunVShader, sunPShader, shipVLayout);
-        temp = XMMatrixIdentity();
-        temp = XMMatrixMultiply(XMMatrixScaling(11, 11, 11), temp); //Make it larger
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
 
-        static float rotation4 = 0; rotation4 += 0.00009;
-        rotateThis = XMMatrixIdentity();
-        rotateThis = XMMatrixRotationY(rotation4);
-        temp = XMMatrixMultiply(rotateThis, temp);
+        YRotation(sunMatrix, 0.0001, true);
 
         //temp = rotateObject(temp, 1, rotate2);
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+        XMStoreFloat4x4(&myMatricies.wMatrix, sunMatrix);
 
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
@@ -207,22 +204,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         
 
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vEarthBuffer, iEarthBuffer, earthVShader, earthPShader, shipVLayout);
-        temp = XMMatrixIdentity();
-        temp = XMMatrixTranslation(80, 0, 0); // Move it
-        temp = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), temp); //Make it larger
 
-        static float rotation2 = 0; rotation2 += 0.001;
-        rotateThis = XMMatrixIdentity();
-        rotateThis = XMMatrixRotationY(rotation2);
-        temp = XMMatrixMultiply(rotateThis, temp);
-        static float r2 = 0; r2 += 0.0001;
-        rotateThis = XMMatrixIdentity();
-        rotateThis = XMMatrixRotationY(r2);
-        temp = XMMatrixMultiply(temp, rotateThis);
-
-
-        //temp = rotateObject(temp, 1, rotate2);
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+        YRotation(earthMatrix, 0.001, true);
+        YRotation(earthMatrix, 0.0001, false);
+        XMStoreFloat4x4(&myMatricies.wMatrix, earthMatrix);
 
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
@@ -236,15 +221,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vmoonBuffer, imoonBuffer, moonVShader, moonPShader, shipVLayout);
 
-        temp = XMMatrixTranslation(95, 5, 0); // Move it
-        temp = XMMatrixMultiply(XMMatrixScaling(0.7, 0.7, 0.7), temp); //Make it larger
-        static float rotation3 = 0; rotation3 += 0.0001;
-        rotateThis = XMMatrixIdentity();
-        rotateThis = XMMatrixRotationY(rotation3);
-        temp = XMMatrixMultiply(temp, rotateThis);
-
-        //temp = rotateObject(temp, 1, rotate2);
-        XMStoreFloat4x4(&myMatricies.wMatrix, temp);
+        YRotation(moonMatrix, 0.001, true);
+        YRotation(moonMatrix, 0.0001, false);
+        XMStoreFloat4x4(&myMatricies.wMatrix, moonMatrix);
 
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
         *((WVP*)(gpuBuffer.pData)) = myMatricies;
@@ -254,6 +233,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->PSSetShaderResources(0, 1, &moonTex);
         //Draw it
         myCon->DrawIndexed(moon.indicesList.size(), 0, 0);
+
+        //When drawing stars use pointlist and use MyVShader because there are no texcoords or norms
 
       mySwap->Present(0, 0); // Telling the backbuffer (the cleared 2d texture) to swap with the front buffer
     }
@@ -508,11 +489,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 
    //Other settings for constant buffer's
-   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 }));   //Setting up camera
+   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 })); //Setting up camera
+
    dirLight.r[0] = { 1,1,1 };  //dirLightColor RGB
-   dirLight.r[1] = { -0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
-   pointLight.r[0] = {0, 0, 0 }; //pointLightPosition XYZ
-   pointLight.r[1] = { 1,0.8f,1 };
+   dirLight.r[3] = { -0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
+
+   pointLight.r[0] = { 0,0,0 }; //pointLightColor RGB 
+   pointLight.r[3] = {0, 0, 0 }; //pointLightPosition XYZ
 
    //Zbuffer
    D3D11_TEXTURE2D_DESC zDesc;
@@ -650,15 +633,31 @@ D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DA
     return desc;
 }
 
-XMMATRIX RotateObject(XMMATRIX temp, float speed)
+void YRotation(XMMATRIX &mOut, float radians, bool LocalorGlobal)
 {
-    //Rotating
-    static float rotation = 0; rotation += speed;
-    XMMATRIX rotateThis = XMMatrixIdentity();
-    rotateThis = XMMatrixRotationY(rotation);
-    temp = XMMatrixMultiply(rotateThis, temp); //flip these if you want the object to spin around world space
-    return temp;
+    //true for local false for global
+    XMMATRIX mRot;
+
+    mRot = XMMatrixRotationY(radians);
+
+    if (LocalorGlobal == true)
+    {
+        mOut = XMMatrixMultiply(mRot, mOut);
+    }
+    else
+        mOut = XMMatrixMultiply(mOut, mRot);
+
 }
+
+//XMMATRIX RotateObject(XMMATRIX temp, float speed)
+//{
+//    //Rotating
+//    static float rotation = 0; rotation += speed;
+//    XMMATRIX rotateThis = XMMatrixIdentity();
+//    rotateThis = XMMatrixRotationY(rotation);
+//    temp = XMMatrixMultiply(rotateThis, temp); //flip these if you want the object to spin around world space
+//    return temp;
+//}
 
 void SetUpContext(UINT* strides,UINT* offset, ID3D11Buffer* meshvb, UINT sizeOfVert, ID3D11Buffer* vMeshBuffer, ID3D11Buffer* iMeshBuffer, ID3D11VertexShader* meshVS,
 ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout)

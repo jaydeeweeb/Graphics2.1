@@ -25,6 +25,7 @@ using namespace std;
 #include "SunVS.csh"
 #include "SunPS.csh"
 
+
 //Mesh
 #include"Assets/StoneHenge.h"
 
@@ -59,8 +60,6 @@ ID3D11ShaderResourceView* earthTex;
 ID3D11ShaderResourceView* moonTex;
 ID3D11ShaderResourceView* sunTex;
 
-
-
 //Shader variables
 ID3D11Buffer* cBuff;
 ID3D11Buffer* cBuffLighting;
@@ -80,6 +79,7 @@ ID3D11Buffer* vmoonBuffer; //vertex buff
 ID3D11Buffer* imoonBuffer; //index buffer
 ID3D11Buffer* vsunBuffer; //vertex buff
 ID3D11Buffer* isunBuffer; //index buffer
+ID3D11Buffer* vstarsBuffer; //vertex buff
 
 
 //Mesh vertex data
@@ -93,9 +93,13 @@ ID3D11DepthStencilView* zBufferView;
 XMMATRIX camera;
 XMMATRIX dirLight;
 XMMATRIX pointLight;
-
+XMMATRIX earthMatrix;
+XMMATRIX shipMatrix;
+XMMATRIX sunMatrix;
+XMMATRIX moonMatrix;
 
 //Math stuff
+float red = 0;
 
 struct MyVertex //Where 2 lines meet
 {
@@ -134,7 +138,7 @@ struct SimpleMesh
     vector<int> indicesList;
 };
 
-SimpleVertex starsArray[1000];
+MyVertex starsArray[1000];
 
 SimpleMesh shipMesh;
 SimpleMesh skyBox;

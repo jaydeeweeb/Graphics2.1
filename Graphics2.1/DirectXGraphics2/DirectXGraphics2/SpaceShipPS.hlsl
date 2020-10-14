@@ -47,6 +47,7 @@ float4 directionalLight(OutputVertex inputPixel)
     float4 surfaceColor = txDiffuse.Sample(samLinear, inputPixel.tex.xy);
     float attenuation = saturate(dot(-normLightDir, inputPixel.nrm));
 
+    //Specular lighting
     float3 reflectVec = reflect(normLightDir, inputPixel.nrm);
     float3 toCamera = normalize(camPos - inputPixel.worldPos);
     float specAllignment = saturate(dot(reflectVec, toCamera));
@@ -64,18 +65,25 @@ float4 directionalLight(OutputVertex inputPixel)
 
 float4 pointLight(OutputVertex inputPixel)
 {
-    //LIGHTDIR = NORMALIZE(LIGHTPOS – SURFACEPOS)
-    //LIGHTRATIO = CLAMP(DOT(LIGHTDIR, SURFACENORMAL))
-    //RESULT = LIGHTRATIO * LIGHTCOLOR * SURFACECOLOR
-
     float3 lightDir = pointLightPosition.xyz - inputPixel.worldPos;  
     float lightDistance = length(lightDir);
     lightDir /= lightDistance; //normalizes lightDir  // if you want to add specular to Point Light, it's the same as DirLight, just use this lightDir variable the same way light direction was used above (negate it before reflecting it though, it points the opposite way)
     float4 surfaceColor = txDiffuse.Sample(samLinear, inputPixel.tex.xy);
     float lightRatio = saturate(dot(lightDir, inputPixel.nrm));
     float rangeAttenuation = 1.0 - saturate(lightDistance /500.0);
+
+    float3 reflectVec = reflect(lightDir, inputPixel.nrm);
+    float3 toCamera = normalize(camPos - inputPixel.worldPos);
+    float specAllignment = saturate(dot(reflectVec, toCamera));
+    specAllignment = pow(specAllignment, 32);
+    float4 finalSpecColor = float4(1, 1, 1, 1) * float4(1, 1, 1, 1) * specAllignment;  //vSurfaceSpecColor (usually white, could come from SpecMap texture) * vLightSpecColor (white, or light color) * specAllignment;
+
     rangeAttenuation *= rangeAttenuation;
     float4 finalPointLight = (lightRatio * pointLightColor * surfaceColor * rangeAttenuation);
-    return finalPointLight;
+    return finalPointLight + finalSpecColor;
+
+    //LIGHTDIR = NORMALIZE(LIGHTPOS – SURFACEPOS)
+//LIGHTRATIO = CLAMP(DOT(LIGHTDIR, SURFACENORMAL))
+//RESULT = LIGHTRATIO * LIGHTCOLOR * SURFACECOLOR
 }
 

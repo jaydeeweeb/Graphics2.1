@@ -53,6 +53,9 @@
     <ClCompile Include="DDSTextureLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DirectXGraphics2.rc">
@@ -82,5 +85,6 @@
       <Filter>Source Files</Filter>
     </FxCompile>
     <FxCompile Include="SunPS.hlsl" />
+    <FxCompile Include="StarGS.hlsl" />
   </ItemGroup>
 </Project>
