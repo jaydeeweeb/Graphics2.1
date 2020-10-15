@@ -4,7 +4,7 @@ SamplerState samLinear : register(s0);
 
 struct OutputVertex
 {
-    //float4 xyzw : SV_Position;
+    float4 xyzw : SV_POSITION;
     float4 rgba : OCOLOR;
    // float3 uvw : OTEXCOORD;
     //float3 nrm : ONORMAL;

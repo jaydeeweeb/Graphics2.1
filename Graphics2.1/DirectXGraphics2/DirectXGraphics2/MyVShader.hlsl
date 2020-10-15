@@ -9,14 +9,14 @@
 struct InputVertex //Where 2 lines meet
 {
     float4 xyzw :POSITION;
-    float4 rgba :COLOR;
+    float4 rgba :OCOLOR;
 };
 
 struct OutputVertex //float4
 {
-    float4 xyzw :SV_Position;
-    float4 rgba : COLOR;
-
+    float4 xyzw :SV_POSITION;
+    float4 rgba : OCOLOR;
+    int vertID : ID;
 };
 
 cbuffer SHADER_VARS : register(b0) //Register assigns to variable name, b = buffer, t = textures, s = samplers
@@ -26,16 +26,17 @@ cbuffer SHADER_VARS : register(b0) //Register assigns to variable name, b = buff
     float4x4 projectionMatrix;
 };
 
-OutputVertex main(InputVertex Input)
+OutputVertex main(InputVertex Input, uint vertexID:SV_VERTEXID) 
 {
     OutputVertex output = (OutputVertex) 0;
     output.xyzw = float4(Input.xyzw.xyz, 1.0f);
     output.rgba = Input.rgba;
-    
+
+    output.vertID = vertexID;
     //Math (shader intrinsics
-    output.xyzw = mul(output.xyzw, worldMatrix);
-    output.xyzw = mul(output.xyzw, viewMatrix);
-    output.xyzw = mul(output.xyzw, projectionMatrix);
+    //output.xyzw = mul(output.xyzw, worldMatrix);
+    //output.xyzw = mul(output.xyzw, viewMatrix);
+    //output.xyzw = mul(output.xyzw, projectionMatrix);
     //Don't do perspectve divide, rasterizer will do that for us
     
     

@@ -14,15 +14,15 @@ XMMATRIX cameraMovement(XMMATRIX posititon, float delta)
 	{
 		temp = XMMatrixMultiply(XMMatrixTranslation(0, 0, speed * delta), temp);
 	}
-	if (GetAsyncKeyState('S')) //S
+	if (GetAsyncKeyState('S'))
 	{
 		temp = XMMatrixMultiply(XMMatrixTranslation(0, 0, -speed * delta), temp);
 	}
-	if (GetAsyncKeyState('A')) //A
+	if (GetAsyncKeyState('A')) 
 	{
 		temp = XMMatrixMultiply(XMMatrixTranslation(-speed * delta, 0, 0), temp);
 	}
-	if (GetAsyncKeyState('D')) //A
+	if (GetAsyncKeyState('D')) 
 	{
 		temp = XMMatrixMultiply(XMMatrixTranslation(speed * delta, 0, 0), temp);
 	}

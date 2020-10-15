@@ -72,19 +72,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     moonMatrix = XMMatrixMultiply(XMMatrixScaling(0.7, 0.7, 0.7), moonMatrix); //Make it smaller
     XMStoreFloat4x4(&myMatricies.wMatrix, moonMatrix); //Storing matrix
 
-    for (int i = 0; i < 1000; i++)
-    {
-        geometryMatricies.starsArray[i].xyzw[0] = randFloat(-1, 1);
-        geometryMatricies.starsArray[i].xyzw[1] = randFloat(-1, 1);
-        geometryMatricies.starsArray[i].xyzw[2] = randFloat(-1, 1);
-        geometryMatricies.starsArray[i].xyzw[3] = 1.0f;
-
-        geometryMatricies.starsArray[i].rgba[0] = 1.0f;
-        geometryMatricies.starsArray[i].rgba[1] = 1.0f;
-        geometryMatricies.starsArray[i].rgba[2] = 1.0f;
-        geometryMatricies.starsArray[i].rgba[3] = 1.0f;
-    }
-
     // Main message loop: This is where the drawing happens
     while (true)//GetMessage(&msg, nullptr, 0, 0))
     {
@@ -253,7 +240,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         //When drawing stars use pointlist and use MyVShader because there are no texcoords or norms
         D3D11_MAPPED_SUBRESOURCE gpuBufferGeometry;
         hr = myCon->Map(cBuffGeometryShader, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferGeometry);
-        *((GeometryBufferData*)(gpuBufferGeometry.pData)) = geometryMatricies;
+        *((StarInitialization*)(gpuBufferGeometry.pData)) = starData;
         myCon->Unmap(cBuffGeometryShader, 0);
         //Connect const buffer to pipeline
         //HLSL matricies are column major (we need to make it row major)
@@ -266,9 +253,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->GSSetShader(starGShader, 0, 0);
         myCon->VSSetShader(vShader, 0, 0);
         myCon->PSSetShader(pShader, 0, 0);
+        myCon->IASetVertexBuffers(0, 1, &vstarsBuffer, mesh_strides1, mesh_offsets1);
         myCon->IASetInputLayout(vMeshGeometryLayout);
-    
-        myCon->Draw(1, 0);
+
+        hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferGeometry);
+        XMStoreFloat4x4(&myMatricies.wMatrix, XMMatrixIdentity());
+        for (int i = 0; i < 16 * 63; i++)
+        {
+            myMatricies.toggleStar[i] = randFloat(0,10);
+
+            if (myMatricies.toggleStar[i] >= 5)
+                myMatricies.toggleStar[i] = 0;
+            else
+                myMatricies.toggleStar[i] = 1;
+
+
+        }
+        *((WVP*)(gpuBufferGeometry.pData)) = myMatricies;
+
+
+        myCon->Unmap(cBuff, 0);
+
+        myCon->Draw(1000, 0);
 
         myCon->GSSetShader(NULL, 0, 0);
         myCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -366,6 +372,21 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    backBuffer->Release();
 
+
+   for (int i = 0; i < 1000; i++)
+   {
+       starData.starsArray[i].xyzw[0] = randFloat(-1000, 1000);
+       starData.starsArray[i].xyzw[1] = randFloat(-1000, 1000);
+       starData.starsArray[i].xyzw[2] = randFloat(-1000, 1000);
+       starData.starsArray[i].xyzw[3] = 1.0f;
+
+       starData.starsArray[i].rgba[0] = 1.0f;
+       starData.starsArray[i].rgba[1] = 1.0f;
+       starData.starsArray[i].rgba[2] = 1.0f;
+       starData.starsArray[i].rgba[3] = 1.0f;
+   }
+
+
    myPort.Width = swap.BufferDesc.Width;
    myPort.Height = swap.BufferDesc.Height;
    myPort.TopLeftX = myPort.TopLeftY = 0;
@@ -391,7 +412,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       D3D11_INPUT_ELEMENT_DESC meshGeometryShaderDesc[] =
    {
        {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-       {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+       {"OCOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
    };
    hr = myDev->CreateInputLayout(meshGeometryShaderDesc, 2, MyVShader, sizeof(MyVShader), &vMeshGeometryLayout);
 
@@ -435,7 +456,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    //Create const buffer
    ZeroMemory(&bDescGeometry, sizeof(bDescGeometry));
    bDescGeometry.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-   bDescGeometry.ByteWidth = sizeof(GeometryBufferData);
+   bDescGeometry.ByteWidth = sizeof(StarInitialization);
    bDescGeometry.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
    bDescGeometry.MiscFlags = 0;
    bDescGeometry.StructureByteStride = 0;
@@ -522,6 +543,15 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    subData.pSysMem = sun.vertexList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &vsunBuffer); //Mesh vertex buffer
 
+   //bDesc = SetUpVertexBuffer(bDesc, subData, sun, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
+   bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+   bDesc.ByteWidth = sizeof(MyVertex) * 1000;
+   bDesc.CPUAccessFlags = 0;
+   bDesc.MiscFlags = 0;
+   bDesc.StructureByteStride = 0;
+   bDesc.Usage = D3D11_USAGE_IMMUTABLE; //IMMUTABLE = Not modifiable
+   subData.pSysMem = starData.starsArray;
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vstarsBuffer); //Mesh vertex buffer
 
    //Create index buffers
    bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;

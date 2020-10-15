@@ -120,6 +120,7 @@ struct WVP //World View Projection
     XMFLOAT4X4 wMatrix; //storage type
     XMFLOAT4X4 vMatrix;
     XMFLOAT4X4 pMatrix;
+    int toggleStar[16 * 63];
 }myMatricies;
 
 struct LightingBufferData
@@ -132,10 +133,11 @@ struct LightingBufferData
     XMFLOAT4 padding;
 }lightingMatricies;
 
-struct GeometryBufferData
+struct StarInitialization
 {
     MyVertex starsArray[1000];
-}geometryMatricies;
+    
+}starData;
 
 struct SimpleVertex
 {
