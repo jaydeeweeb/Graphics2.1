@@ -25,7 +25,6 @@ cbuffer SHADER_VARS : register(b0) //Register assigns to variable name, b = buff
 float4 directionalLight(OutputVertex inputPixel);
 float4 pointLight(OutputVertex inputPixel);
 
-
 float4 main(OutputVertex inputPixel) : SV_TARGET
 {
     inputPixel.nrm = normalize(inputPixel.nrm);
@@ -59,8 +58,7 @@ float4 directionalLight(OutputVertex inputPixel)
 
 
     //LIGHTRATIO = CLAMP(DOT(-LIGHTDIR, SURFACENORMAL))
-    //    RESULT = LIGHTRATIO * LIGHTCOLOR * SURFACECOLOR
-
+    //RESULT = LIGHTRATIO * LIGHTCOLOR * SURFACECOLOR
 }
 
 float4 pointLight(OutputVertex inputPixel)

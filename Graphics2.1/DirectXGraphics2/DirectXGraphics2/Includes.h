@@ -24,6 +24,9 @@ using namespace std;
 #include "SpaceBoxPS.csh"
 #include "SunVS.csh"
 #include "SunPS.csh"
+#include "starGS.csh"
+//#include "starGS.csh"
+
 
 
 //Mesh
@@ -53,6 +56,7 @@ ID3D11PixelShader* spaceBoxPShader;
 ID3D11PixelShader* earthPShader;
 ID3D11PixelShader* moonPShader;
 ID3D11PixelShader* sunPShader;
+ID3D11GeometryShader* starGShader;
 ID3D11ShaderResourceView* stonehengeTexture;
 ID3D11ShaderResourceView* shipTexture;
 ID3D11ShaderResourceView* spaceBoxTex;
@@ -63,6 +67,7 @@ ID3D11ShaderResourceView* sunTex;
 //Shader variables
 ID3D11Buffer* cBuff;
 ID3D11Buffer* cBuffLighting;
+ID3D11Buffer* cBuffGeometryShader;
 
 
 //Buffers
@@ -85,6 +90,8 @@ ID3D11Buffer* vstarsBuffer; //vertex buff
 //Mesh vertex data
 ID3D11VertexShader* vMeshShader;
 ID3D11InputLayout* vMeshLayout;
+ID3D11InputLayout* vMeshGeometryLayout;
+
 
 //Z buffer for depth
 ID3D11Texture2D* zBuffer;
@@ -125,6 +132,11 @@ struct LightingBufferData
     XMFLOAT4 padding;
 }lightingMatricies;
 
+struct GeometryBufferData
+{
+    MyVertex starsArray[1000];
+}geometryMatricies;
+
 struct SimpleVertex
 {
     XMFLOAT3 Pos;
@@ -138,7 +150,7 @@ struct SimpleMesh
     vector<int> indicesList;
 };
 
-MyVertex starsArray[1000];
+//MyVertex starsArray[1000];
 
 SimpleMesh shipMesh;
 SimpleMesh skyBox;

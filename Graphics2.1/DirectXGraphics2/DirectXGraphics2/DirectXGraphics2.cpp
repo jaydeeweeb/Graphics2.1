@@ -9,6 +9,7 @@ D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DA
 void YRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal);
 void SetUpContext(UINT* strides, UINT* offset, ID3D11Buffer* meshvb, UINT sizeOfVert, ID3D11Buffer* vMeshBuffer, ID3D11Buffer* iMeshBuffer, ID3D11VertexShader* meshVS,
     ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout);
+float randFloat(float min, float max);
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -71,6 +72,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     moonMatrix = XMMatrixMultiply(XMMatrixScaling(0.7, 0.7, 0.7), moonMatrix); //Make it smaller
     XMStoreFloat4x4(&myMatricies.wMatrix, moonMatrix); //Storing matrix
 
+    for (int i = 0; i < 1000; i++)
+    {
+        geometryMatricies.starsArray[i].xyzw[0] = randFloat(-1, 1);
+        geometryMatricies.starsArray[i].xyzw[1] = randFloat(-1, 1);
+        geometryMatricies.starsArray[i].xyzw[2] = randFloat(-1, 1);
+        geometryMatricies.starsArray[i].xyzw[3] = 1.0f;
+
+        geometryMatricies.starsArray[i].rgba[0] = 1.0f;
+        geometryMatricies.starsArray[i].rgba[1] = 1.0f;
+        geometryMatricies.starsArray[i].rgba[2] = 1.0f;
+        geometryMatricies.starsArray[i].rgba[3] = 1.0f;
+    }
+
     // Main message loop: This is where the drawing happens
     while (true)//GetMessage(&msg, nullptr, 0, 0))
     {
@@ -121,7 +135,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         XMStoreFloat4(&lightingMatricies.pointLightColor, pointLight.r[0]);
         XMStoreFloat4(&lightingMatricies.pointLightPosition, pointLight.r[3]);
 
-
         D3D11_MAPPED_SUBRESOURCE gpuBufferLight;
         hr = myCon->Map(cBuffLighting, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferLight);
         *((LightingBufferData*)(gpuBufferLight.pData)) = lightingMatricies;
@@ -131,6 +144,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         ID3D11Buffer* lightingconstants[] = { cBuffLighting };
         //myCon->VSSetConstantBuffers(0, 1, lightingconstants);
         myCon->PSSetConstantBuffers(0, 1, lightingconstants);
+
 
         //SkyBox setup
         UINT mesh_strides1[] = { sizeof(SimpleVertex) };
@@ -234,7 +248,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         //Draw it
         myCon->DrawIndexed(moon.indicesList.size(), 0, 0);
 
+
+        //Starfield
         //When drawing stars use pointlist and use MyVShader because there are no texcoords or norms
+        D3D11_MAPPED_SUBRESOURCE gpuBufferGeometry;
+        hr = myCon->Map(cBuffGeometryShader, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferGeometry);
+        *((GeometryBufferData*)(gpuBufferGeometry.pData)) = geometryMatricies;
+        myCon->Unmap(cBuffGeometryShader, 0);
+        //Connect const buffer to pipeline
+        //HLSL matricies are column major (we need to make it row major)
+        ID3D11Buffer* geometryconstants[] = { cBuff, cBuffGeometryShader };
+        myCon->GSSetConstantBuffers(0, 2, geometryconstants);
+        //myCon->PSSetConstantBuffers(0, 1, geometryconstants);
+
+        myCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+        myCon->GSSetShader(starGShader, 0, 0);
+        myCon->VSSetShader(vShader, 0, 0);
+        myCon->PSSetShader(pShader, 0, 0);
+        myCon->IASetInputLayout(vMeshGeometryLayout);
+    
+        myCon->Draw(1, 0);
+
+        myCon->GSSetShader(NULL, 0, 0);
+        myCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        myCon->IASetInputLayout(shipVLayout);
 
       mySwap->Present(0, 0); // Telling the backbuffer (the cleared 2d texture) to swap with the front buffer
     }
@@ -345,6 +383,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ZeroMemory(&bDescLighting, sizeof(bDescLighting));
    ZeroMemory(&subDataLighting, sizeof(subDataLighting));
 
+   D3D11_BUFFER_DESC bDescGeometry;
+   D3D11_SUBRESOURCE_DATA subDataGeometry;
+   ZeroMemory(&bDescGeometry, sizeof(bDescGeometry));
+   ZeroMemory(&subDataGeometry, sizeof(subDataGeometry));
+
+      D3D11_INPUT_ELEMENT_DESC meshGeometryShaderDesc[] =
+   {
+       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+       {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+   };
+   hr = myDev->CreateInputLayout(meshGeometryShaderDesc, 2, MyVShader, sizeof(MyVShader), &vMeshGeometryLayout);
 
    //START OF STONEHENGE
    //Make matching input layout
@@ -358,6 +407,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    hr = myDev->CreateVertexShader(MyVShader, sizeof(MyVShader), nullptr, &vShader);
    hr = myDev->CreatePixelShader(MyPShader, sizeof(MyPShader), nullptr, &pShader);
+   hr = myDev->CreateGeometryShader(StarGS, sizeof(StarGS), nullptr, &starGShader);
+
    //Convert dds into logic
    hr = CreateDDSTextureFromFile(myDev, L"./Assets/StoneHenge.dds", nullptr, &stonehengeTexture);
 
@@ -380,6 +431,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    bDescLighting.StructureByteStride = 0;
    bDescLighting.Usage = D3D11_USAGE_DYNAMIC;
    hr = myDev->CreateBuffer(&bDescLighting, nullptr, &cBuffLighting);
+
+   //Create const buffer
+   ZeroMemory(&bDescGeometry, sizeof(bDescGeometry));
+   bDescGeometry.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+   bDescGeometry.ByteWidth = sizeof(GeometryBufferData);
+   bDescGeometry.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+   bDescGeometry.MiscFlags = 0;
+   bDescGeometry.StructureByteStride = 0;
+   bDescGeometry.Usage = D3D11_USAGE_DYNAMIC;
+   hr = myDev->CreateBuffer(&bDescGeometry, nullptr, &cBuffGeometryShader);
+
 
    //Load complex meshes
    bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -670,4 +732,9 @@ ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout)
     myCon->VSSetShader(meshVS, 0, 0);
     myCon->PSSetShader(meshPS, 0, 0);
     myCon->IASetInputLayout(meshVLayout);
+}
+
+float randFloat(float min, float max)
+{
+    return ((float)rand()/RAND_MAX) * (max - min) + min; //Sets range
 }

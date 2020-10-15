@@ -15,10 +15,9 @@ struct InputVertex //Where 2 lines meet
 struct OutputVertex //float4
 {
     float4 xyzw :SV_Position;
-    float4 rgba : OCOLOR;
+    float4 rgba : COLOR;
 
 };
-
 
 cbuffer SHADER_VARS : register(b0) //Register assigns to variable name, b = buffer, t = textures, s = samplers
 {
