@@ -115,7 +115,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 
         YRotation(dirLight, 0.01, false);
-        //YRotation(pointLight, 0.01, true);
+        YRotation(pointLight, 0.01, true);
+        dirLight.r[0] = { 1,1,1 };
+        pointLight.r[0] = { 1,1,1 };
         XMStoreFloat4(&lightingMatricies.camPos, camera.r[3]); //Storing matrix
         XMStoreFloat4(&lightingMatricies.dirLightColor, dirLight.r[0]);
         XMStoreFloat4(&lightingMatricies.dirLightDirection, dirLight.r[3]);
@@ -242,7 +244,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         hr = myCon->Map(cBuffGeometryShader, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferGeometry);
         *((StarInitialization*)(gpuBufferGeometry.pData)) = starData;
         myCon->Unmap(cBuffGeometryShader, 0);
-        //Connect const buffer to pipeline
         //HLSL matricies are column major (we need to make it row major)
         ID3D11Buffer* geometryconstants[] = { cBuff, cBuffGeometryShader };
         myCon->GSSetConstantBuffers(0, 2, geometryconstants);
@@ -265,12 +266,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             if (myMatricies.toggleStar[i] >= 5)
                 myMatricies.toggleStar[i] = 0;
             else
-                myMatricies.toggleStar[i] = 1;
-
-
+                myMatricies.toggleStar[i] = 5;
         }
         *((WVP*)(gpuBufferGeometry.pData)) = myMatricies;
-
 
         myCon->Unmap(cBuff, 0);
 
