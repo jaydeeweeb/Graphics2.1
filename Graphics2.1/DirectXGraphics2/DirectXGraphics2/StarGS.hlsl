@@ -5,6 +5,7 @@ struct MyVertex
 	float4 xyzw : SV_POSITION;
 	float4 rgba : OCOLOR;
 	int vertID : ID;
+
 };
 
 cbuffer SHADER_VARS : register(b0) //Register assigns to variable name, b = buffer, t = textures, s = samplers
@@ -12,12 +13,13 @@ cbuffer SHADER_VARS : register(b0) //Register assigns to variable name, b = buff
 	float4x4 worldMatrix;
 	float4x4 viewMatrix;
 	float4x4 projectionMatrix;
+	int toggleStar[16 * 63];
 };
 
-cbuffer SHADER_STARS : register(b1) //Register assigns to variable name, b = buffer, t = textures, s = samplers
-{
-	bool starsArray[1000];
-};
+//cbuffer SHADER_STARS : register(b1) //Register assigns to variable name, b = buffer, t = textures, s = samplers
+//{
+//	int starsArray[1000];
+//};
 
 struct GSOutput
 {
@@ -41,7 +43,7 @@ void main(
 	element.pos = mul(element.pos, projectionMatrix);
 
 
-	if(starsArray[input[0].vertID] == 1)
+	if(toggleStar[input[0].vertID] == 0)
 	output.Append(element); //Sends to rasterizer
 
 }

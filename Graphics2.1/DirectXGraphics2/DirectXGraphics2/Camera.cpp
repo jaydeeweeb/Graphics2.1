@@ -7,7 +7,7 @@ XMMATRIX cameraMovement(XMMATRIX posititon, float delta)
 	XMMATRIX temp;
 	bool directionflag = true;
 
-	float speed = 10.0f;
+	float speed = 20.0f;
 	float turnSpeed = 0.02f;
 	temp = posititon;
 

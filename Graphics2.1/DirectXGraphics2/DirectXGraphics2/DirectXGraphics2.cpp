@@ -6,7 +6,9 @@
 
 void LoadMesh(const char* meshFileName, SimpleMesh& mesh);
 D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DATA data, SimpleMesh meshVertexData, D3D11_BIND_FLAG flag, D3D11_USAGE usage, int cpuFlags, int miscFlags, int byteStride);
-void YRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal);
+void YRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal, bool direction);
+void XRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal, bool direction);
+void ZRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal, bool direction);
 void SetUpContext(UINT* strides, UINT* offset, ID3D11Buffer* meshvb, UINT sizeOfVert, ID3D11Buffer* vMeshBuffer, ID3D11Buffer* iMeshBuffer, ID3D11VertexShader* meshVS,
     ID3D11PixelShader* meshPS, ID3D11InputLayout* meshVLayout);
 float randFloat(float min, float max);
@@ -54,23 +56,41 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     XMMATRIX temp;
 
     shipMatrix = XMMatrixIdentity();
-    shipMatrix = XMMatrixTranslation(60, 30, 0); // Move it
+    shipMatrix = XMMatrixTranslation(120, 30, 0); // Move it
     shipMatrix = XMMatrixMultiply(XMMatrixScaling(2, 2, 2), shipMatrix); //Make it larger
+    shipMatrix = XMMatrixMultiply(XMMatrixRotationX(0.3f), shipMatrix); //Make it smaller
     XMStoreFloat4x4(&myMatricies.wMatrix, shipMatrix); //Storing matrix
 
     sunMatrix = XMMatrixIdentity();
-    sunMatrix = XMMatrixMultiply(XMMatrixScaling(11, 11, 11), sunMatrix); //Make it larger
+    sunMatrix = XMMatrixMultiply(XMMatrixScaling(14, 14, 14), sunMatrix); //Make it larger
     XMStoreFloat4x4(&myMatricies.wMatrix, sunMatrix);
 
     earthMatrix = XMMatrixIdentity();
-    earthMatrix = XMMatrixTranslation(80, 0, 0);
+    earthMatrix = XMMatrixTranslation(100, 0, 0);
     earthMatrix = XMMatrixMultiply(XMMatrixScaling(3, 3, 3), earthMatrix);
     XMStoreFloat4x4(&myMatricies.wMatrix, earthMatrix); //Storing matrix
 
     moonMatrix = XMMatrixIdentity();
-    moonMatrix = XMMatrixTranslation(95, 5, 0); // Move it
-    moonMatrix = XMMatrixMultiply(XMMatrixScaling(0.7, 0.7, 0.7), moonMatrix); //Make it smaller
+    moonMatrix = XMMatrixTranslation(125, 5, 0); // Move it
+    moonMatrix = XMMatrixMultiply(XMMatrixScaling(0.7f, 0.7f, 0.7f), moonMatrix); //Make it smaller
     XMStoreFloat4x4(&myMatricies.wMatrix, moonMatrix); //Storing matrix
+
+    haloMatrix = XMMatrixIdentity();
+    haloMatrix = XMMatrixTranslation(200, 100, 0); // Move it
+    haloMatrix = XMMatrixMultiply(XMMatrixScaling(2, 2, 2), haloMatrix); //Make it larger
+    //haloMatrix = XMMatrixMultiply(XMMatrixScaling(1, 1, 0.1f), haloMatrix); //Make it skinnier
+    haloMatrix = XMMatrixMultiply(XMMatrixRotationX(-1.5f), haloMatrix); 
+    haloMatrix = XMMatrixMultiply(XMMatrixRotationY(1), haloMatrix); 
+    haloMatrix = XMMatrixMultiply(XMMatrixScaling(1, 1, 0.5f), haloMatrix); //Make it larger
+
+    XMStoreFloat4x4(&myMatricies.wMatrix, haloMatrix); 
+
+
+    icyMatrix = XMMatrixIdentity();
+    icyMatrix = XMMatrixTranslation(-200, 0, 0); // Move it
+    icyMatrix = XMMatrixMultiply(XMMatrixScaling(6, 6, 6), icyMatrix);
+    XMStoreFloat4x4(&myMatricies.wMatrix, icyMatrix);
+
 
     // Main message loop: This is where the drawing happens
     while (true)//GetMessage(&msg, nullptr, 0, 0))
@@ -114,15 +134,25 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->VSSetConstantBuffers(0, 1, constants);
 
 
-        YRotation(dirLight, 0.01, false);
-        YRotation(pointLight, 0.01, true);
-        dirLight.r[0] = { 1,1,1 };
-        pointLight.r[0] = { 1,1,1 };
-        XMStoreFloat4(&lightingMatricies.camPos, camera.r[3]); //Storing matrix
+        //YRotation(dirLight, 0.01, false);
+        //YRotation(pointLightMatrix, 0.01, true);
+        //dirLight.r[0] = { 1,1,1 };
+        //pointLightMatrix.r[0] = { 1,1,1 };
+        //lightingMatricies.coneRatio = 0.7f;
+        lightingMatricies.innerConeRatio = 0.9f;
+        lightingMatricies.outerConeRatio = 0.75f;
+        XMStoreFloat4(&lightingMatricies.camPos, camera.r[3]); 
         XMStoreFloat4(&lightingMatricies.dirLightColor, dirLight.r[0]);
         XMStoreFloat4(&lightingMatricies.dirLightDirection, dirLight.r[3]);
-        XMStoreFloat4(&lightingMatricies.pointLightColor, pointLight.r[0]);
-        XMStoreFloat4(&lightingMatricies.pointLightPosition, pointLight.r[3]);
+        XMStoreFloat4(&lightingMatricies.pointLightColor, pointLightMatrix.r[0]);
+        XMStoreFloat4(&lightingMatricies.pointLightPosition, pointLightMatrix.r[3]);
+        XMStoreFloat4(&lightingMatricies.spotLightColor, spotLightMatrix.r[0]);
+        //XMStoreFloat4(&lightingMatricies.spotLightPosition, spotLightMatrix.r[3]);
+        XMStoreFloat4(&lightingMatricies.spotLightPosition, camera.r[3]);
+        //XMStoreFloat4(&lightingMatricies.spotLightDir, spotLightMatrix.r[1]);
+        XMStoreFloat4(&lightingMatricies.spotLightDir, camera.r[2]);
+
+
 
         D3D11_MAPPED_SUBRESOURCE gpuBufferLight;
         hr = myCon->Map(cBuffLighting, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferLight);
@@ -173,7 +203,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         XMMATRIX rotateThis = XMMatrixIdentity();
         rotateThis = XMMatrixRotationY(rotation);
 
-        YRotation(shipMatrix, 0.0005, true);
+        YRotation(shipMatrix, 0.0005, true, false);
         XMStoreFloat4x4(&myMatricies.wMatrix, shipMatrix);
         //Telling the video card to refresh
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
@@ -181,7 +211,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->Unmap(cBuff, 0);
 
         //Pixel shader resources (3rd parameter expects an array: bypass with &)
-        myCon->PSSetShaderResources(0, 1, &shipTexture);
+        ID3D11ShaderResourceView* TexArray[2] = { shipTexture , shipSpecTexture };
+        myCon->PSSetShaderResources(0, 2, TexArray); // change second argument to 2 and add shipTex and new specTex to array of ID3D11ShaderResourceView
+
         //Draw it
         myCon->DrawIndexed(shipMesh.indicesList.size(), 0, 0);
 
@@ -191,7 +223,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         meshVB[0] = { vsunBuffer };
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vsunBuffer, isunBuffer, sunVShader, sunPShader, shipVLayout);
 
-        YRotation(sunMatrix, 0.0001, true);
+        YRotation(sunMatrix, 0.0001, true, true);
 
         //temp = rotateObject(temp, 1, rotate2);
         XMStoreFloat4x4(&myMatricies.wMatrix, sunMatrix);
@@ -206,10 +238,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->DrawIndexed(sun.indicesList.size(), 0, 0);
         
 
+        mesh_strides[0] = { sizeof(SimpleVertex) };
+        mesh_offsets[0] = { 0 };
+        meshVB[0] = { vEarthBuffer };
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vEarthBuffer, iEarthBuffer, earthVShader, earthPShader, shipVLayout);
 
-        YRotation(earthMatrix, 0.001, true);
-        YRotation(earthMatrix, 0.0001, false);
+        YRotation(earthMatrix, 0.001, true, true);
+        YRotation(earthMatrix, 0.0001, false, true);
         XMStoreFloat4x4(&myMatricies.wMatrix, earthMatrix);
 
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
@@ -222,10 +257,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->DrawIndexed(earth.indicesList.size(), 0, 0);
     
 
+        mesh_strides[0] = { sizeof(SimpleVertex) };
+        mesh_offsets[0] = { 0 };
+        meshVB[0] = { vmoonBuffer };
         SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vmoonBuffer, imoonBuffer, moonVShader, moonPShader, shipVLayout);
 
-        YRotation(moonMatrix, 0.001, true);
-        YRotation(moonMatrix, 0.0001, false);
+        YRotation(moonMatrix, 0.001, true, true);
+        YRotation(moonMatrix, 0.0001, false, true);
         XMStoreFloat4x4(&myMatricies.wMatrix, moonMatrix);
 
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
@@ -236,6 +274,48 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         myCon->PSSetShaderResources(0, 1, &moonTex);
         //Draw it
         myCon->DrawIndexed(moon.indicesList.size(), 0, 0);
+
+
+        mesh_strides[0] = { sizeof(SimpleVertex) };
+        mesh_offsets[0] = { 0 };
+        meshVB[0] = { vhaloBuffer };
+        SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vhaloBuffer, ihaloBuffer, haloVShader, haloPShader, shipVLayout);
+
+        ZRotation(haloMatrix, 0.0001, true, true);
+        XMStoreFloat4x4(&myMatricies.wMatrix, haloMatrix);
+
+        hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+        *((WVP*)(gpuBuffer.pData)) = myMatricies;
+        myCon->Unmap(cBuff, 0);
+
+        XMStoreFloat4x4(&myMatricies.wMatrix, haloMatrix);
+
+        //Pixel shader resources (3rd parameter expects an array: bypass with &)
+        myCon->PSSetShaderResources(0, 1, &haloTex);
+        //Draw it
+        myCon->DrawIndexed(halo.indicesList.size(), 0, 0);
+
+
+        mesh_strides[0] = { sizeof(SimpleVertex) };
+        mesh_offsets[0] = { 0 };
+        meshVB[0] = { vicyBuffer };
+        SetUpContext(mesh_strides, mesh_offsets, *meshVB, sizeof(SimpleVertex), vicyBuffer, iicyBuffer, icyVShader, icyPShader, shipVLayout);
+
+        YRotation(icyMatrix, 0.001, true, false);
+        YRotation(icyMatrix, 0.0007, false, false);
+
+        XMStoreFloat4x4(&myMatricies.wMatrix, icyMatrix);
+
+        hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+        *((WVP*)(gpuBuffer.pData)) = myMatricies;
+        myCon->Unmap(cBuff, 0);
+
+        XMStoreFloat4x4(&myMatricies.wMatrix, icyMatrix);
+
+        //Pixel shader resources (3rd parameter expects an array: bypass with &)
+        myCon->PSSetShaderResources(0, 1, &icyTex);
+        //Draw it
+        myCon->DrawIndexed(icy.indicesList.size(), 0, 0);
 
 
         //Starfield
@@ -259,14 +339,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
         hr = myCon->Map(cBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBufferGeometry);
         XMStoreFloat4x4(&myMatricies.wMatrix, XMMatrixIdentity());
+
         for (int i = 0; i < 16 * 63; i++)
         {
-            myMatricies.toggleStar[i] = randFloat(0,10);
+            myMatricies.toggleStar[i] = rand() % 2;
 
-            if (myMatricies.toggleStar[i] >= 5)
+            if (myMatricies.toggleStar[i] > 0)
                 myMatricies.toggleStar[i] = 0;
             else
-                myMatricies.toggleStar[i] = 5;
+                myMatricies.toggleStar[i] = 1;
         }
         *((WVP*)(gpuBufferGeometry.pData)) = myMatricies;
 
@@ -276,7 +357,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
         myCon->GSSetShader(NULL, 0, 0);
         myCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        myCon->IASetInputLayout(shipVLayout);
+        //myCon->IASetInputLayout(shipVLayout);
 
       mySwap->Present(0, 0); // Telling the backbuffer (the cleared 2d texture) to swap with the front buffer
     }
@@ -370,7 +451,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    backBuffer->Release();
 
-
    for (int i = 0; i < 1000; i++)
    {
        starData.starsArray[i].xyzw[0] = randFloat(-1000, 1000);
@@ -383,7 +463,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        starData.starsArray[i].rgba[2] = 1.0f;
        starData.starsArray[i].rgba[3] = 1.0f;
    }
-
 
    myPort.Width = swap.BufferDesc.Width;
    myPort.Height = swap.BufferDesc.Height;
@@ -413,6 +492,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        {"OCOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
    };
    hr = myDev->CreateInputLayout(meshGeometryShaderDesc, 2, MyVShader, sizeof(MyVShader), &vMeshGeometryLayout);
+
 
    //START OF STONEHENGE
    //Make matching input layout
@@ -482,22 +562,21 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hr = myDev->CreateVertexShader(MyMeshVShader, sizeof(MyMeshVShader), nullptr, &vMeshShader);
    //END OF STONEHENGE
 
-
+   
    D3D11_INPUT_ELEMENT_DESC meshShipInputDesc[] =
    {
        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
-
    };
    hr = myDev->CreateInputLayout(meshShipInputDesc, 3, SpaceShipVS, sizeof(SpaceShipVS), &shipVLayout);
-
 
    //Create shaders
    hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &shipVShader);
    hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &shipPShader);
    LoadMesh("./Assets/WorkingShipMesh", shipMesh);
    hr = CreateDDSTextureFromFile(myDev, L"./Assets/SpaceStation.dds", nullptr, &shipTexture);  //Loading texture
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/Station2Spec.dds", nullptr, &shipTexture);  //Loading texture
 
    hr = myDev->CreateVertexShader(SpaceBoxVS, sizeof(SpaceBoxVS), nullptr, &spaceBoxV);
    hr = myDev->CreatePixelShader(SpaceBoxPS, sizeof(SpaceBoxPS), nullptr, &spaceBoxPShader);
@@ -518,6 +597,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hr = myDev->CreatePixelShader(SunPS, sizeof(SunPS), nullptr, &sunPShader);
    LoadMesh("./Assets/SunMesh", sun);
    hr = CreateDDSTextureFromFile(myDev, L"./Assets/Sun.dds", nullptr, &sunTex);  //Loading texture
+
+   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &haloVShader);
+   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &haloPShader);
+   LoadMesh("./Assets/HaloRingMesh", halo);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/moonfart.dds", nullptr, &haloTex);  //Loading texture
+
+   hr = myDev->CreateVertexShader(SpaceShipVS, sizeof(SpaceShipVS), nullptr, &icyVShader);
+   hr = myDev->CreatePixelShader(SpaceShipPS, sizeof(SpaceShipPS), nullptr, &icyPShader);
+   LoadMesh("./Assets/icePlanetMesh", icy);
+   hr = CreateDDSTextureFromFile(myDev, L"./Assets/iceplanet.dds", nullptr, &icyTex);  //Loading texture
 
 
    //Create vertex buffers
@@ -541,6 +630,14 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    subData.pSysMem = sun.vertexList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &vsunBuffer); //Mesh vertex buffer
 
+   bDesc = SetUpVertexBuffer(bDesc, subData, halo, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
+   subData.pSysMem = halo.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vhaloBuffer); //Mesh vertex buffer
+
+   bDesc = SetUpVertexBuffer(bDesc, subData, icy, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
+   subData.pSysMem = icy.vertexList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &vicyBuffer); //Mesh vertex buffer
+
    //bDesc = SetUpVertexBuffer(bDesc, subData, sun, D3D11_BIND_VERTEX_BUFFER, D3D11_USAGE_IMMUTABLE, 0, 0, 0);
    bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
    bDesc.ByteWidth = sizeof(MyVertex) * 1000;
@@ -550,6 +647,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    bDesc.Usage = D3D11_USAGE_IMMUTABLE; //IMMUTABLE = Not modifiable
    subData.pSysMem = starData.starsArray;
    hr = myDev->CreateBuffer(&bDesc, &subData, &vstarsBuffer); //Mesh vertex buffer
+
 
    //Create index buffers
    bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -577,15 +675,30 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    subData.pSysMem = sun.indicesList.data();
    hr = myDev->CreateBuffer(&bDesc, &subData, &isunBuffer);
 
+   bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   bDesc.ByteWidth = sizeof(unsigned int) * (halo.indicesList.size());
+   subData.pSysMem = halo.indicesList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &ihaloBuffer);
+
+   bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+   bDesc.ByteWidth = sizeof(unsigned int) * (icy.indicesList.size());
+   subData.pSysMem = icy.indicesList.data();
+   hr = myDev->CreateBuffer(&bDesc, &subData, &iicyBuffer);
+
 
    //Other settings for constant buffer's
-   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -50 }, { 0,0,0 }, { 0,1,0 })); //Setting up camera
+   camera = XMMatrixInverse(nullptr, XMMatrixLookAtLH({ 0, 10, -100 }, { 0,0,0 }, { 0,1,0 })); //Setting up camera
 
-   dirLight.r[0] = { 1,1,1 };  //dirLightColor RGB
+   dirLight.r[0] = { 0.1,0.3,0.3 };  //dirLightColor RGB
    dirLight.r[3] = { -0.5f, -0.5f, 0.0 }; //dirLightDirection XYZ
 
-   pointLight.r[0] = { 0,0,0 }; //pointLightColor RGB 
-   pointLight.r[3] = {0, 0, 0 }; //pointLightPosition XYZ
+   pointLightMatrix.r[0] = {1,0.5,0.5 }; //pointLightColor RGB 
+   pointLightMatrix.r[3] = {0, 0, 0 }; //pointLightPosition XYZ
+
+   spotLightMatrix.r[0] = { 1,1,1 }; //spotLight RGB
+   spotLightMatrix.r[3] = { 150,0,0 }; //spotLight XYZ
+   spotLightMatrix.r[1] = { -1,0,0 }; //spotLight Dir XYZ
+
 
    //Zbuffer
    D3D11_TEXTURE2D_DESC zDesc;
@@ -723,12 +836,53 @@ D3D11_BUFFER_DESC SetUpVertexBuffer(D3D11_BUFFER_DESC desc, D3D11_SUBRESOURCE_DA
     return desc;
 }
 
-void YRotation(XMMATRIX &mOut, float radians, bool LocalorGlobal)
+void YRotation(XMMATRIX &mOut, float radians, bool LocalorGlobal, bool direction)
 {
     //true for local false for global
     XMMATRIX mRot;
 
+    if(direction == true)
     mRot = XMMatrixRotationY(radians);
+    else
+        mRot = XMMatrixRotationY(-radians);
+
+    if (LocalorGlobal == true)
+    {
+        mOut = XMMatrixMultiply(mRot, mOut);
+    }
+    else
+        mOut = XMMatrixMultiply(mOut, mRot);
+
+}
+
+void XRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal, bool direction)
+{
+    //true for local false for global
+    XMMATRIX mRot;
+
+    if (direction == true)
+        mRot = XMMatrixRotationX(radians);
+    else
+        mRot = XMMatrixRotationX(-radians);
+
+    if (LocalorGlobal == true)
+    {
+        mOut = XMMatrixMultiply(mRot, mOut);
+    }
+    else
+        mOut = XMMatrixMultiply(mOut, mRot);
+
+}
+
+void ZRotation(XMMATRIX& mOut, float radians, bool LocalorGlobal, bool direction)
+{
+    //true for local false for global
+    XMMATRIX mRot;
+
+    if (direction == true)
+        mRot = XMMatrixRotationZ(radians);
+    else
+        mRot = XMMatrixRotationZ(-radians);
 
     if (LocalorGlobal == true)
     {

@@ -49,20 +49,28 @@ ID3D11VertexShader* shipVShader;
 ID3D11VertexShader* spaceBoxV;
 ID3D11VertexShader* earthVShader;
 ID3D11VertexShader* moonVShader;
+ID3D11VertexShader* haloVShader;
 ID3D11VertexShader* sunVShader;
+ID3D11VertexShader* icyVShader;
 ID3D11PixelShader* pShader;
 ID3D11PixelShader* shipPShader;
 ID3D11PixelShader* spaceBoxPShader;
 ID3D11PixelShader* earthPShader;
 ID3D11PixelShader* moonPShader;
 ID3D11PixelShader* sunPShader;
+ID3D11PixelShader* haloPShader;
+ID3D11PixelShader* icyPShader;
 ID3D11GeometryShader* starGShader;
 ID3D11ShaderResourceView* stonehengeTexture;
 ID3D11ShaderResourceView* shipTexture;
+ID3D11ShaderResourceView* shipSpecTexture;
+//vector<ID3D11ShaderResourceView*> textures;
 ID3D11ShaderResourceView* spaceBoxTex;
 ID3D11ShaderResourceView* earthTex;
 ID3D11ShaderResourceView* moonTex;
 ID3D11ShaderResourceView* sunTex;
+ID3D11ShaderResourceView* haloTex;
+ID3D11ShaderResourceView* icyTex;
 
 //Shader variables
 ID3D11Buffer* cBuff;
@@ -81,9 +89,13 @@ ID3D11Buffer* iskyBoxBuffer; //index buffer
 ID3D11Buffer* vEarthBuffer; //vertex buff
 ID3D11Buffer* iEarthBuffer; //index buffer
 ID3D11Buffer* vmoonBuffer; //vertex buff
+ID3D11Buffer* vhaloBuffer; //vertex buff
+ID3D11Buffer* ihaloBuffer; //index buffer
 ID3D11Buffer* imoonBuffer; //index buffer
 ID3D11Buffer* vsunBuffer; //vertex buff
 ID3D11Buffer* isunBuffer; //index buffer
+ID3D11Buffer* vicyBuffer; //vertex buff
+ID3D11Buffer* iicyBuffer; //index buffer
 ID3D11Buffer* vstarsBuffer; //vertex buff
 
 
@@ -99,14 +111,17 @@ ID3D11DepthStencilView* zBufferView;
 
 XMMATRIX camera;
 XMMATRIX dirLight;
-XMMATRIX pointLight;
+XMMATRIX pointLightMatrix;
+XMMATRIX spotLightMatrix;
 XMMATRIX earthMatrix;
 XMMATRIX shipMatrix;
 XMMATRIX sunMatrix;
 XMMATRIX moonMatrix;
+XMMATRIX haloMatrix;
+XMMATRIX icyMatrix;
+
 
 //Math stuff
-float red = 0;
 
 struct MyVertex //Where 2 lines meet
 {
@@ -125,12 +140,17 @@ struct WVP //World View Projection
 
 struct LightingBufferData
 {
+    XMFLOAT4 spotLightPosition;
+    XMFLOAT4 spotLightColor;
+    XMFLOAT4 spotLightDir;
     XMFLOAT4 pointLightPosition;
     XMFLOAT4 pointLightColor;
     XMFLOAT4 dirLightDirection;
     XMFLOAT4 dirLightColor;
     XMFLOAT4 camPos;
-    XMFLOAT4 padding;
+    XMFLOAT2 padding;
+    float innerConeRatio;
+    float outerConeRatio;
 }lightingMatricies;
 
 struct StarInitialization
@@ -159,6 +179,8 @@ SimpleMesh skyBox;
 SimpleMesh earth;
 SimpleMesh moon;
 SimpleMesh sun;
+SimpleMesh halo;
+SimpleMesh icy;
 
 
 void releaseData()
